@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.geometry.Insets?>
+
+<SplitPane styleClass="split-pane" stylesheets="@debugging.css" dividerPositions="0.40" VBox.vgrow="ALWAYS" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1">
+    <items>
+        <!-- Left Side: Mobile Phone Canvas Wrapper -->
+        <VBox alignment="CENTER" styleClass="phone-container">
+            <!-- Simulated Phone Frame -->
+            <StackPane styleClass="phone-frame" maxWidth="360" minHeight="620">
+                <!-- Inner Screen Area -->
+                <StackPane fx:id="imageContainer" styleClass="drop-zone" prefWidth="320" prefHeight="580" VBox.vgrow="ALWAYS" onMouseMoved="#handleMouseMoved" onMouseEntered="#handleMouseEntered" onMouseExited="#handleMouseExited" onMousePressed="#handleMousePressed" onMouseDragged="#handleMouseDragged" onMouseReleased="#handleMouseReleased">
+                    <!-- The actual Image -->
+                    <ImageView fx:id="screenshotImageView" fitWidth="316" fitHeight="576" pickOnBounds="true" preserveRatio="false" styleClass="image-view-rounded" />
+                    <!-- Hint Text -->
+                    <Label fx:id="dragDropHint" text="Drag &amp; Drop Screenshot" wrapText="true" textAlignment="CENTER" styleClass="hint-text" />
+                    
+                    <!-- Crosshair Overlay -->
+                    <Pane fx:id="crosshairPane" mouseTransparent="true" visible="false" prefWidth="320" prefHeight="580">
+                        <javafx.scene.shape.Rectangle fx:id="selectionBox" styleClass="selection-box" visible="false" />
+                        <javafx.scene.shape.Line fx:id="crosshairX" styleClass="crosshair-line" visible="false" />
+                        <javafx.scene.shape.Line fx:id="crosshairY" styleClass="crosshair-line" visible="false" />
+                        <Label fx:id="coordinatesLabel" text="X: 0, Y: 0" styleClass="coordinates-label" visible="false" />
+                    </Pane>
+                </StackPane>
+                <!-- Simulated Phone Notch -->
+                <StackPane styleClass="phone-notch" StackPane.alignment="TOP_CENTER" />
+            </StackPane>
+        </VBox>
+
+        <!-- Right Side: Developer Controls / Action Panel -->
+        <VBox spacing="16.0" styleClass="controls-card" alignment="TOP_CENTER" VBox.vgrow="ALWAYS">
+            
+            <!-- ADB Extraction Tools -->
+            <VBox spacing="12.0" styleClass="module-card">
+                <Label text="ADB &amp; Profile" styleClass="module-title"/>
+                <GridPane hgap="10" vgap="8">
+                    <columnConstraints>
+                        <ColumnConstraints hgrow="NEVER"/>
+                        <ColumnConstraints hgrow="ALWAYS"/>
+                        <ColumnConstraints hgrow="NEVER"/>
+                    </columnConstraints>
+                    <Label text="Profile" styleClass="field-label" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                    <ComboBox fx:id="profileComboBox" maxWidth="1.7976931348623157E308" promptText="Choose Profile..." styleClass="combo-box" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                    <Button fx:id="btnCaptureAdb" mnemonicParsing="false" text="Capture" onAction="#handleCaptureAdb" styleClass="compact-button" GridPane.rowIndex="0" GridPane.columnIndex="2"/>
+                </GridPane>
+            </VBox>
+                        
+            <!-- Image Recognition Tools -->
+            <VBox spacing="12.0" styleClass="module-card">
+                <Label text="Image Recognition" styleClass="module-title"/>
+                <TextField fx:id="searchTextField" promptText="Search template..." styleClass="text-field"/>
+                <ListView fx:id="templateListView" prefHeight="150" styleClass="list-view"/>
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <ComboBox fx:id="actionComboBox" maxWidth="1.7976931348623157E308" promptText="Choose Action" styleClass="combo-box" HBox.hgrow="ALWAYS"/>
+                    <Button fx:id="btnRunAction" mnemonicParsing="false" text="Run" onAction="#handleRunAction" styleClass="compact-button"/>
+                </HBox>
+            </VBox>
+
+            <!-- Logging / Terminal -->
+            <VBox spacing="10.0" VBox.vgrow="ALWAYS" styleClass="module-card">
+                <Label text="System Logs" styleClass="module-title"/>
+                <TextArea fx:id="logTextArea" editable="false" promptText="Logs will appear here..." styleClass="terminal-text-area" wrapText="true" VBox.vgrow="ALWAYS" />
+            </VBox>
+        </VBox>
+    </items>
+</SplitPane>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox alignment="TOP_CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" spacing="20.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <Label text="Fishing Minigame Control">
+         <font>
+            <Font name="System Bold" size="24.0" />
+         </font>
+      </Label>
+      <Label text="This task automates the fishing tournament minigame." />
+      <Label text="It threads through gaps to reach the bottom while avoiding fish." />
+      <CheckBox fx:id="checkBoxEnableFishing" mnemonicParsing="false" text="Enable Fishing Minigame Task" />
+      <Label text="" />
+      <Label text="Test Hook Loop">
+         <font>
+            <Font name="System Bold" size="16.0" />
+         </font>
+      </Label>
+      <Label text="Captures every frame from the emulator and searches for the fishing hook template." />
+      <Label text="Logs hook coordinates and per-frame ADB vs OpenCV timing to the Logs UI." />
+      <CheckBox fx:id="checkBoxEnableTestHookLoop" mnemonicParsing="false" text="Enable Test Hook Loop" />
+   </children>
+   <padding>
+      <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+   </padding>
+</VBox>
