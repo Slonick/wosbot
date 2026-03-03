@@ -475,6 +475,11 @@ public enum EnumTemplates {
     NUMBER_3("/templates/numbers/three.png"),
     NUMBER_4("/templates/numbers/four.png"),
     NUMBER_5("/templates/numbers/five.png"),
+    NUMBER_6("/templates/numbers/six.png"),
+    NUMBER_7("/templates/numbers/seven.png"),
+    NUMBER_8("/templates/numbers/eight.png"),
+    NUMBER_9("/templates/numbers/nine.png"),
+    NUMBER_10("/templates/numbers/ten.png"),
 
     // ========================================================================
     // FISHING MINIGAME

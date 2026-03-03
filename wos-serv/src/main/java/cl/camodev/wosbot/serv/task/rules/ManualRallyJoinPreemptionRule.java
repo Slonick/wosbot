@@ -161,7 +161,12 @@ public class ManualRallyJoinPreemptionRule implements PreemptionRule {
                     EnumTemplates.NUMBER_2,
                     EnumTemplates.NUMBER_3,
                     EnumTemplates.NUMBER_4,
-                    EnumTemplates.NUMBER_5
+                    EnumTemplates.NUMBER_5,
+                    EnumTemplates.NUMBER_6,
+                    EnumTemplates.NUMBER_7,
+                    EnumTemplates.NUMBER_8,
+                    EnumTemplates.NUMBER_9,
+                    EnumTemplates.NUMBER_10
             };
 
             int currentCount = -1;

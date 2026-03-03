@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="550.0" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1">
+    <children>
+        <ScrollPane fitToWidth="true" fitToHeight="true" hbarPolicy="NEVER" style="-fx-background-color: transparent; -fx-background: transparent;" vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308">
+            <content>
+                <VBox spacing="14" style="-fx-background-color: #1f1f1f; -fx-background-radius: 8; -fx-padding: 18;" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" VBox.vgrow="ALWAYS">
+                    <children>
+                        <!-- Gift Codes Section -->
+                        <VBox spacing="0" style="-fx-background-color: #242424; -fx-background-radius: 8;">
+                            <children>
+                                <HBox alignment="CENTER_LEFT" maxWidth="1.7976931348623157E308" style="-fx-background-color: linear-gradient(#e74c3c, #c0392b); -fx-background-radius: 8 8 0 0; -fx-padding: 8 12;">
+                                    <children>
+                                        <Label style="-fx-font-weight: bold; -fx-text-fill: #ffffff;" text="Gift Codes" />
+                                    </children>
+                                </HBox>
+                                <VBox spacing="10" style="-fx-padding: 12;">
+                                    <children>
+                                        <Label style="-fx-font-size: 10px; -fx-text-fill: #b5b5b5;" text="Fetch the latest available gift codes from the server." wrapText="true" />
+
+                                        <Separator style="-fx-opacity: 0.3; -fx-padding: 4 0;" />
+
+                                        <HBox spacing="10" alignment="CENTER_LEFT">
+                                            <children>
+                                                <Button fx:id="buttonFetch" mnemonicParsing="false" onAction="#handleFetch" prefHeight="30.0" prefWidth="120.0" text="Fetch" style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" />
+                                                <Label fx:id="labelStatus" style="-fx-text-fill: #b5b5b5;" text="Click Fetch to load gift codes." />
+                                            </children>
+                                        </HBox>
+
+                                        <Separator style="-fx-opacity: 0.3; -fx-padding: 4 0;" />
+
+                                        <TableView fx:id="tableGiftcodes" maxHeight="1.7976931348623157E308" VBox.vgrow="ALWAYS" prefHeight="400.0" style="-fx-background-color: #2a2a2a;">
+                                            <columns>
+                                                <TableColumn fx:id="columnCode" text="Gift Code" prefWidth="280" />
+                                                <TableColumn fx:id="columnDate" text="Date" prefWidth="120" />
+                                            </columns>
+                                        </TableView>
+                                    </children>
+                                </VBox>
+                            </children>
+                        </VBox>
+                    </children>
+                </VBox>
+            </content>
+        </ScrollPane>
+    </children>
+</VBox>

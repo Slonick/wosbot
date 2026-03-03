@@ -33,6 +33,7 @@ import cl.camodev.wosbot.events.view.EventsLayoutController;
 import cl.camodev.wosbot.experts.view.ExpertsLayoutController;
 import cl.camodev.wosbot.fishing.view.FishingLayoutController;
 import cl.camodev.wosbot.gather.view.GatherLayoutController;
+import cl.camodev.wosbot.giftcode.view.GiftcodeLayoutController;
 import cl.camodev.wosbot.intel.view.IntelLayoutController;
 import cl.camodev.wosbot.mobilization.view.MobilizationLayoutController;
 import cl.camodev.wosbot.ot.DTOBotState;
@@ -407,6 +408,7 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
 				new ModuleDefinition("EventsLayout", "Events", EventsLayoutController::new),
 				new ModuleDefinition("ExpertsLayout", "Experts", ExpertsLayoutController::new),
 				new ModuleDefinition("ChiefOrderLayout", "Chief Order", ChiefOrderLayoutController::new),
+				new ModuleDefinition("GiftcodeLayout", "Get Giftcodes", GiftcodeLayoutController::new),
 				new ModuleDefinition("DebuggingLayout", "Debugging", DebuggingLayoutController::new),
 				new ModuleDefinition("EmuConfigLayout", "Config", EmuConfigLayoutController::new)
 				);
