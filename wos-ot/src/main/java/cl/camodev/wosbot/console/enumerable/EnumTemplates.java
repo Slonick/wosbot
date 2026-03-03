@@ -50,6 +50,7 @@ public enum EnumTemplates {
 	GAME_HOME_SHORTCUTS_HELP_REQUEST3("/templates/shortcuts/helpRequest3.png"),
 	GAME_HOME_SHORTCUTS_UPGRADE("/templates/shortcuts/upgrade.png"),
 	GAME_HOME_SHORTCUTS_OBTAIN("/templates/shortcuts/obtain.png"),
+	GAME_HOME_SHORTCUTS_ATTACK("/templates/shortcuts/attack.png"),
 	GAME_HOME_SHORTCUTS_GO("/templates/shortcuts/go.png"),
 	GAME_HOME_SHORTCUTS_UPGRADE_TEXT("/templates/shortcuts/upgradetext.png"),
 	FURNACE_UPGRADE_PACK("/templates/shortcuts/furnaceUpgradePack.png"),

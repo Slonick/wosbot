@@ -37,7 +37,7 @@ public class FishingMinigameTask extends DelayedTask {
 
     // ── Game area ──────────────────────────────────────────────────────────
     private static final int SCREEN_W   = 720;
-    private static final int UI_TOP_Y   = 170;
+    private static final int UI_TOP_Y   = 100;   // hook sits at Y≈127 during active play
     private static final int PLAY_BOT_Y = 1200;
 
     // ── Hook geometry ──────────────────────────────────────────────────────
@@ -80,11 +80,15 @@ public class FishingMinigameTask extends DelayedTask {
     /** Minimum displacement before issuing a swipe (px). */
     private static final int SWIPE_DEADZONE_PX = 6;
     /** Template scan interval (every N ticks) for drift correction + new fish. */
-    private static final int SCAN_INTERVAL = 10;
+    private static final int SCAN_INTERVAL = 5;
     /** Max pixel distance to associate a detection with an existing track. */
     private static final float TRACK_MATCH_DIST = 60.0f;
     /** Remove single-detection tracks after this many consecutive missed scans. */
     private static final int MAX_MISSED_SCANS = 10;
+    /** Consecutive hook misses allowed before deciding the game ended. */
+    private static final int MAX_HOOK_MISS = 50;
+    /** Hook moves 1.2× the commanded swipe distance (empirical overshoot). */
+    private static final float SWIPE_OVERSHOOT = 1.2f;
 
     // ── Runtime state ──────────────────────────────────────────────────────
     private final List<TrackedFish> trackedFish = new ArrayList<>();
@@ -103,14 +107,39 @@ public class FishingMinigameTask extends DelayedTask {
     // MAIN GAME LOOP
     // =========================================================================
 
+    /** Max time (ms) to wait for the hook to appear before giving up. */
+    private static final long HOOK_WAIT_TIMEOUT_MS = 10_000L;
+    /** Polling interval (ms) while waiting for the hook. */
+    private static final long HOOK_WAIT_POLL_MS = 200L;
+
     @Override
     protected void execute() {
         logInfo("Fishing Minigame: PCV algorithm started.");
         trackedFish.clear();
         nextTrackId = 0;
 
+        // ── 0. Wait for the hook to appear (game loading buffer) ─────────
+        if (!waitForHook()) {
+            logInfo("Fishing Minigame: hook never appeared — aborting.");
+            reschedule(LocalDateTime.now().plusHours(6));
+            return;
+        }
+        logInfo("Fishing Minigame: hook detected — entering game loop.");
+
         long start = System.currentTimeMillis();
         int ticks = 0;
+        int hookMisses = 0;
+        int hookCx = 0, hookCy = 0; // last known hook position
+        int lastSwipeDeltaX = 0;    // signed px of last commanded swipe
+        boolean swipedLastTick = false;
+
+        // Timing accumulators for summary
+        long totalCapMs   = 0;
+        long totalHookMs  = 0;
+        long totalScanMs  = 0;
+        long totalLogicMs = 0;
+        int  hookHits     = 0;
+        int  scanTicks    = 0;
 
         while (System.currentTimeMillis() - start < MAX_DURATION_MS) {
             checkPreemption();
@@ -125,42 +154,119 @@ public class FishingMinigameTask extends DelayedTask {
             trackedFish.removeIf(f -> f.cy < UI_TOP_Y - f.h);
 
             // ── 3. Capture one screenshot ────────────────────────────────
+            long t0 = System.nanoTime();
             DTORawImage raw = emuManager.captureScreenshotViaADB(EMULATOR_NUMBER);
+            long t1 = System.nanoTime();
+            long capMs = (t1 - t0) / 1_000_000;
+            totalCapMs += capMs;
 
             // ── 4. Locate hook (every tick for responsive control) ────────
+            long t2 = System.nanoTime();
             DTOImageSearchResult hookResult = emuManager.searchTemplate(
                     EMULATOR_NUMBER, raw, EnumTemplates.FISHING_HOOK,
                     new DTOPoint(0, UI_TOP_Y),
                     new DTOPoint(SCREEN_W, PLAY_BOT_Y), THR_HOOK);
+            long t3 = System.nanoTime();
+            long hookMs = (t3 - t2) / 1_000_000;
+            totalHookMs += hookMs;
 
-            if (hookResult == null || !hookResult.isFound()) {
-                logDebug("Hook not detected — game may have ended.");
-                break;
+            if (hookResult != null && hookResult.isFound()) {
+                hookCx = hookResult.getPoint().getX();
+                hookCy = hookResult.getPoint().getY();
+                hookMisses = 0;
+                hookHits++;
+                swipedLastTick = false;
+                double conf = hookResult.getMatchPercentage();
+                logInfo(String.format("T%d | HOOK (%d,%d) %.1f%% | cap=%dms hook=%dms",
+                        ticks, hookCx, hookCy, conf, capMs, hookMs));
+            } else {
+                hookMisses++;
+                double bestConf = (hookResult != null) ? hookResult.getMatchPercentage() : 0;
+                if (hookMisses >= MAX_HOOK_MISS) {
+                    logInfo(String.format("T%d | NO HOOK (best=%.1f%%) — lost %d ticks, game ended.",
+                            ticks, bestConf, hookMisses));
+                    break;
+                }
+                // Smart prediction: if a swipe just happened, estimate
+                // where the hook moved (1.2× overshoot).
+                if (swipedLastTick && hookMisses == 1) {
+                    int predicted = hookCx + Math.round(lastSwipeDeltaX * SWIPE_OVERSHOOT);
+                    predicted = Math.max(HOOK_W / 2, Math.min(SCREEN_W - HOOK_W / 2, predicted));
+                    logInfo(String.format("T%d | NO HOOK (best=%.1f%%) — post-swipe predict X=%d (was %d, Δ=%+d) | cap=%dms hook=%dms",
+                            ticks, bestConf, predicted, hookCx, lastSwipeDeltaX, capMs, hookMs));
+                    hookCx = predicted;
+                } else {
+                    logInfo(String.format("T%d | NO HOOK (best=%.1f%%) — miss %d/%d | cap=%dms hook=%dms",
+                            ticks, bestConf, hookMisses, MAX_HOOK_MISS, capMs, hookMs));
+                }
+                swipedLastTick = false;
+                // Fall through — still scan for fish and compute danger zones
+                // using last known / predicted hook position.
             }
-
-            int hookCx = hookResult.getPoint().getX();
-            int hookCy = hookResult.getPoint().getY();
 
             // ── 5. Periodic template scan ────────────────────────────────
+            long scanMs = 0;
             if (ticks % SCAN_INTERVAL == 0) {
+                long s0 = System.nanoTime();
                 List<FishDetection> detections = scanForFish(raw, hookCy);
                 reconcileTracks(detections, now);
+                long s1 = System.nanoTime();
+                scanMs = (s1 - s0) / 1_000_000;
+                totalScanMs += scanMs;
+                scanTicks++;
+                // Log each detection position
+                StringBuilder detSb = new StringBuilder();
+                for (FishDetection d : detections) {
+                    detSb.append(String.format("%s@(%d,%d) ", d.label, d.cx, d.cy));
+                }
+                logInfo(String.format("T%d | SCAN %d det, %d tracked: %s| scan=%dms",
+                        ticks, detections.size(), trackedFish.size(), detSb.toString(), scanMs));
             }
 
-            // ── 6. Danger zones from predicted positions ─────────────────
+            // ── 6. Log tracked fish state ─────────────────────────────────
+            int belowCount = 0;
+            StringBuilder fishSb = new StringBuilder();
+            for (TrackedFish f : trackedFish) {
+                fishSb.append(String.format("%s#%d@(%.0f,%.0f,vx=%.3f) ", f.label, f.id, f.cx, f.cy, f.vx));
+                if (f.cy > hookCy) belowCount++;
+            }
+            if (!trackedFish.isEmpty()) {
+                logInfo(String.format("T%d | FISH %d tracked, %d below hookY=%d: %s",
+                        ticks, trackedFish.size(), belowCount, hookCy, fishSb.toString()));
+            }
+
+            // ── 7. Danger zones from predicted positions ─────────────────
+            long l0 = System.nanoTime();
             List<int[]> dangers = computeDangerZones(hookCx, hookCy);
 
-            // ── 7. Pick safe target ──────────────────────────────────────
-            int targetX = chooseSafeTarget(hookCx, dangers);
+            // Log danger zone details
+            if (!dangers.isEmpty()) {
+                StringBuilder zSb = new StringBuilder();
+                for (int[] d : dangers) zSb.append(String.format("[%d,%d] ", d[0], d[1]));
+                logInfo(String.format("T%d | DANGER %d zones: %s", ticks, dangers.size(), zSb.toString()));
+            }
 
-            // ── 8. Swipe if needed ───────────────────────────────────────
+            // ── 8. Pick safe target ──────────────────────────────────────
+            int targetX = chooseSafeTarget(hookCx, dangers);
+            long l1 = System.nanoTime();
+            long logicMs = (l1 - l0) / 1_000_000;
+            totalLogicMs += logicMs;
+
+            logInfo(String.format("T%d | TARGET=%d hookX=%d delta=%d deadzone=%d",
+                    ticks, targetX, hookCx, targetX - hookCx, SWIPE_DEADZONE_PX));
+
+            // ── 9. Swipe if needed ───────────────────────────────────────
             if (Math.abs(targetX - hookCx) > SWIPE_DEADZONE_PX) {
                 int swipeY = Math.min(hookCy + 60, PLAY_BOT_Y - 10);
+                lastSwipeDeltaX = targetX - hookCx;
                 emuManager.executeSwipe(EMULATOR_NUMBER,
                         new DTOPoint(hookCx, swipeY),
                         new DTOPoint(targetX, swipeY));
-                logDebug(String.format("Tick %d | hook=(%d,%d) -> %d | tracked=%d | zones=%d",
-                        ticks, hookCx, hookCy, targetX, trackedFish.size(), dangers.size()));
+                swipedLastTick = true;
+                logInfo(String.format("T%d | SWIPE (%d,%d)->(%d,%d) | delta=%d",
+                        ticks, hookCx, swipeY, targetX, swipeY, lastSwipeDeltaX));
+            } else {
+                swipedLastTick = false;
             }
 
             ticks++;
@@ -170,8 +276,52 @@ public class FishingMinigameTask extends DelayedTask {
             }
         }
 
-        logInfo("Fishing Minigame completed after " + ticks + " ticks.");
+        // ── Summary ──────────────────────────────────────────────────────
+        long totalElapsed = System.currentTimeMillis() - start;
+        double fps = ticks > 0 ? (ticks * 1000.0 / totalElapsed) : 0;
+        long avgCap   = ticks > 0 ? totalCapMs / ticks : 0;
+        long avgHook  = ticks > 0 ? totalHookMs / ticks : 0;
+        long avgScan  = scanTicks > 0 ? totalScanMs / scanTicks : 0;
+        long avgLogic = hookHits > 0 ? totalLogicMs / hookHits : 0;
+
+        logInfo("=== Fishing Minigame completed ===");
+        logInfo(String.format("Ticks: %d | Elapsed: %dms | FPS: %.1f", ticks, totalElapsed, fps));
+        logInfo(String.format("Hook hits: %d/%d (%.0f%%) | Fish tracked: %d",
+                hookHits, ticks, ticks > 0 ? hookHits * 100.0 / ticks : 0, trackedFish.size()));
+        logInfo(String.format("Avg cap: %dms | Avg hook: %dms | Avg scan: %dms | Avg logic: %dms",
+                avgCap, avgHook, avgScan, avgLogic));
         reschedule(LocalDateTime.now().plusHours(6));
+    }
+
+    // =========================================================================
+    // HOOK WAIT
+    // =========================================================================
+
+    /**
+     * Polls for the hook template every {@link #HOOK_WAIT_POLL_MS} ms for up to
+     * {@link #HOOK_WAIT_TIMEOUT_MS} ms. Returns {@code true} as soon as the
+     * hook is found, or {@code false} if the timeout expires.
+     */
+    private boolean waitForHook() {
+        long deadline = System.currentTimeMillis() + HOOK_WAIT_TIMEOUT_MS;
+        while (System.currentTimeMillis() < deadline) {
+            checkPreemption();
+
+            DTORawImage raw = emuManager.captureScreenshotViaADB(EMULATOR_NUMBER);
+            DTOImageSearchResult hookResult = emuManager.searchTemplate(
+                    EMULATOR_NUMBER, raw, EnumTemplates.FISHING_HOOK,
+                    new DTOPoint(0, UI_TOP_Y),
+                    new DTOPoint(SCREEN_W, PLAY_BOT_Y), THR_HOOK);
+
+            if (hookResult != null && hookResult.isFound()) {
+                return true;
+            }
+
+            logInfo("Waiting for hook... ("
+                    + (deadline - System.currentTimeMillis()) / 1000 + "s remaining)");
+            sleepTask(HOOK_WAIT_POLL_MS);
+        }
+        return false;
     }
 
     // =========================================================================
@@ -185,7 +335,9 @@ public class FishingMinigameTask extends DelayedTask {
      */
     private List<FishDetection> scanForFish(DTORawImage raw, int hookCy) {
         List<FishDetection> result = new ArrayList<>();
-        int searchTopY = Math.max(UI_TOP_Y, hookCy - PUFFER_H);
+        // Always scan the full playable area so fish are tracked even when
+        // the hook is near the bottom — they'll be ready for the next wave.
+        int searchTopY = UI_TOP_Y;
 
         result.addAll(scanType(raw, EnumTemplates.FISHING_PUFFERFISH,
                 THR_PUFFER, PUFFER_W, PUFFER_H, VX_PUFFER, searchTopY, "puffer"));
@@ -443,7 +595,7 @@ public class FishingMinigameTask extends DelayedTask {
         if (cursor < maxX) gaps.add(new int[]{cursor, maxX});
 
         if (gaps.isEmpty()) {
-            logDebug("No safe gap — falling back to screen centre.");
+            logInfo("No safe gap — falling back to screen centre.");
             return SCREEN_W / 2;
         }
 

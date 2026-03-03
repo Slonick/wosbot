@@ -238,6 +238,11 @@ public enum EnumConfigurationKey {
     // Myriad Bazaar event
     MYRIAD_BAZAAR_EVENT_BOOL("false", Boolean.class),
 
+    // Beast Hunting
+    BEAST_HUNTING_ENABLED_BOOL("false", Boolean.class),
+    BEAST_HUNTING_MARCHES_INT("3", Integer.class),
+    BEAST_HUNTING_LEVEL_INT("30", Integer.class),
+
     // Bear trap event
     BEAR_TRAP_EVENT_BOOL("false", Boolean.class),
     BEAR_TRAP_RALLY_FLAG_INT("1", Integer.class),

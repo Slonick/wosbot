@@ -17,6 +17,7 @@ import cl.camodev.utiles.ImageSearchUtil;
 import cl.camodev.wosbot.alliance.view.AllianceLayoutController;
 import cl.camodev.wosbot.alliancechampionship.view.AllianceChampionshipLayoutController;
 import cl.camodev.wosbot.bear.view.BearTrapLayoutController;
+import cl.camodev.wosbot.beasthunting.view.BeastHuntingLayoutController;
 import cl.camodev.wosbot.chieforder.view.ChiefOrderLayoutController;
 import cl.camodev.wosbot.city.view.CityEventsExtraLayoutController;
 import cl.camodev.wosbot.city.view.CityEventsLayoutController;
@@ -399,6 +400,7 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
                 new ModuleDefinition("AllianceShop", "Alliance Shop", AllianceShopController::new),
                 new ModuleDefinition("AllianceMobilizationLayout", "Alliance Mobilization", MobilizationLayoutController::new),
                 new ModuleDefinition("BearTrapLayout", "Bear Trap", BearTrapLayoutController::new),
+                new ModuleDefinition("BeastHuntingLayout", "Beast Hunting", BeastHuntingLayoutController::new),
 				new ModuleDefinition("FishingLayout", "Fishing Tournament", FishingLayoutController::new),
 				new ModuleDefinition("TrainingLayout", "Training", TrainingLayoutController::new),
 				new ModuleDefinition("PetsLayout", "Pets", PetsLayoutController::new),

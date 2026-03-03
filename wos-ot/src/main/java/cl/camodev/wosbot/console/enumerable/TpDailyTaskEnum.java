@@ -53,6 +53,8 @@ public enum TpDailyTaskEnum {
 	CHIEF_ORDER_URGENT_MOBILIZATION(301, "Chief Order: Urgent Mobilization", EnumConfigurationKey.BOOL_CHIEF_ORDER_URGENT_MOBILISATION),
 	CHIEF_ORDER_PRODUCTIVITY_DAY(302, "Chief Order: Productivity Day", EnumConfigurationKey.BOOL_CHIEF_ORDER_PRODUCTIVITY_DAY),
 
+	BEAST_HUNTING(16, "Beast Hunting",               EnumConfigurationKey.BEAST_HUNTING_ENABLED_BOOL),
+
 	INITIALIZE(100, "Initialize",                  null),
 
 	GATHER_BOOST(101, "Gather Speed Boost",       EnumConfigurationKey.GATHER_SPEED_BOOL),

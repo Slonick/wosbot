@@ -158,10 +158,17 @@ public class GatherTask extends DelayedTask {
         int freeSlots = activeQueues - currentActive;
         logInfo(String.format("Free slots: %d. Pool: %s", freeSlots, rotationPool));
 
-        // Always ensure active marches are removed from the pool to avoid duplicates
+        // Remove types already marching from the current pool for initial fairness
         if (rotationPool.removeAll(activeMarches)) {
             logInfo("Removed active marches from pool: " + activeMarches);
             saveRotationPool();
+        }
+
+        // If pool is empty after removing active marches but there are free slots,
+        // allow duplicate types so we can fill all available march queues
+        if (rotationPool.isEmpty() && freeSlots > 0) {
+            logInfo("Pool empty after removing active marches. Allowing duplicates for remaining slots.");
+            rotationPool = new ArrayList<>(enabledTypes);
         }
 
         if (freeSlots <= 0) {
@@ -181,21 +188,21 @@ public class GatherTask extends DelayedTask {
             if (rotationPool.isEmpty()) {
                 logInfo("Pool empty. Resetting.");
                 rotationPool = new ArrayList<>(enabledTypes);
-                rotationPool.removeAll(activeMarches); // CRITICAL: Exclude currently active ones
+                // Don't remove active marches on refill — duplicates are needed
+                // to fill remaining slots when activeQueues > enabledTypes.size()
                 Collections.shuffle(rotationPool);
             }
 
-            // Select batch
-            List<GatherType> batch = rotationPool.stream()
-                    .limit(remaining)
-                    .collect(Collectors.toList());
+            // Try ALL pool items — don't limit to remaining, so if one type fails
+            // we still try others. The inner loop stops when slots are full.
+            List<GatherType> batch = new ArrayList<>(rotationPool);
 
             if (batch.isEmpty())
                 break;
 
             boolean progress = false;
             for (GatherType type : batch) {
-                if (currentActive >= activeQueues)
+                if (remaining <= 0 || currentActive >= activeQueues)
                     break;
 
                 if (deploy(type)) {
@@ -205,6 +212,10 @@ public class GatherTask extends DelayedTask {
                     progress = true;
                     logInfo(String.format("Deployed %s. Removed from pool.", type));
                     activeMarches.add(type); // Add to avoid re-picking if we loop
+                } else {
+                    // Remove failed type from pool to avoid retrying it endlessly
+                    rotationPool.remove(type);
+                    logInfo(String.format("Failed to deploy %s. Skipping.", type));
                 }
             }
 
