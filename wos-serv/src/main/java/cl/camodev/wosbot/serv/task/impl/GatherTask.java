@@ -339,7 +339,6 @@ public class GatherTask extends DelayedTask {
         if (!deployMarchAction(type))
             return retryLater();
 
-        updateReschedule(LocalDateTime.now().plusMinutes(5));
         return true;
     }
 
@@ -504,7 +503,7 @@ public class GatherTask extends DelayedTask {
     }
 
     private void finalizeReschedule() {
-        reschedule(earliestReschedule != null ? earliestReschedule.plusMinutes(5) : LocalDateTime.now().plusMinutes(5));
+        reschedule(earliestReschedule != null ? earliestReschedule : LocalDateTime.now().plusMinutes(5));
     }
 
     private boolean checkIntelConflict() {
