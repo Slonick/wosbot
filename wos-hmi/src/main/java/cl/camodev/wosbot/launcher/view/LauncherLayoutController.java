@@ -69,6 +69,8 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import cl.camodev.wosbot.alliance.view.AllianceShopController;
+import cl.camodev.wosbot.telegram.view.TelegramLayoutController;
+import cl.camodev.wosbot.serv.impl.TelegramBotService;
 
 public class LauncherLayoutController implements IProfileLoadListener, IStaminaChangeListener {
 
@@ -113,11 +115,25 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
         initializeProfileComboBox();
         initializeModules();
         initializeExternalLibraries();
+        initializeTelegramBot();
         showVersion();
         buttonStartStop.setDisable(false);
         buttonPauseResume.setDisable(true);
         configurePauseMenu();
 
+    }
+
+    private void initializeTelegramBot() {
+        HashMap<String, String> cfg = ServConfig.getServices().getGlobalConfig();
+        if (cfg == null) return;
+        boolean enabled = Boolean.parseBoolean(
+                cfg.getOrDefault(EnumConfigurationKey.TELEGRAM_BOT_ENABLED_BOOL.name(), "false"));
+        String token     = cfg.getOrDefault(EnumConfigurationKey.TELEGRAM_BOT_TOKEN_STRING.name(), "");
+        String chatIdStr = cfg.getOrDefault(EnumConfigurationKey.TELEGRAM_ALLOWED_CHAT_ID_STRING.name(), "");
+        if (enabled && !token.isBlank()) {
+            long chatId = chatIdStr.isBlank() ? 0L : Long.parseLong(chatIdStr);
+            TelegramBotService.getInstance().start(token, chatId);
+        }
     }
 
     private void showVersion() {
@@ -410,7 +426,8 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
 				new ModuleDefinition("ChiefOrderLayout", "Chief Order", ChiefOrderLayoutController::new),
 				new ModuleDefinition("GiftcodeLayout", "Get Giftcodes", GiftcodeLayoutController::new),
 				new ModuleDefinition("DebuggingLayout", "Debugging", DebuggingLayoutController::new),
-				new ModuleDefinition("EmuConfigLayout", "Config", EmuConfigLayoutController::new)
+				new ModuleDefinition("EmuConfigLayout", "Config", EmuConfigLayoutController::new),
+				new ModuleDefinition("TelegramLayout", "Telegram", TelegramLayoutController::new)
 				);
 		//@formatter:on
 

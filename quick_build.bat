@@ -4,8 +4,10 @@ echo ==========================================
 echo      WOS Bot Quick Recompile Script
 echo ==========================================
 
-REM Optional: Kill running bot instance if you want to ensure files are not locked
-REM taskkill /F /IM java.exe
+echo Stopping any running Java processes...
+taskkill /F /IM java.exe >nul 2>&1
+timeout /t 2 >nul
+
 call mvn clean
 if errorlevel 1 (
     echo [ERROR] Clean failed! Check if files are locked.

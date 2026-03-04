@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="maven-antrun-" default="main">
+  <target name="main">
+    <delete file="C:\Users\parad\Desktop\New folder\wosbot\wos-tgwatcher\target/original-wos-tgwatcher-1.7.0.jar" quiet="true" />
+    <delete file="C:\Users\parad\Desktop\New folder\wosbot\wos-tgwatcher\target/wos-tgwatcher-1.7.0.jar" quiet="true" />
+    <delete file="C:\Users\parad\Desktop\New folder\wosbot\wos-tgwatcher\target/wos-tgwatcher-1.7.0-shaded.jar" quiet="true" />
+  </target>
+</project>

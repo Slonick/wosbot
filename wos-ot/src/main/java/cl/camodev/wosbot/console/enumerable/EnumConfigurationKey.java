@@ -25,7 +25,10 @@ public enum EnumConfigurationKey {
 	LDPLAYER_PATH_STRING("", String.class),
 	CURRENT_EMULATOR_STRING("", String.class),
 	DISCORD_TOKEN_STRING("", String.class),
-	
+	TELEGRAM_BOT_ENABLED_BOOL("false", Boolean.class),
+	TELEGRAM_BOT_TOKEN_STRING("", String.class),
+	TELEGRAM_ALLOWED_CHAT_ID_STRING("", String.class),
+
     // ========================================================================
     // CITY AND BUILDING MANAGEMENT
     // ========================================================================

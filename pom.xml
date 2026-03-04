@@ -24,6 +24,7 @@
 		<module>wos-persitence</module>
 		<module>wos-serv</module>
 		<module>wos-ot</module>
+		<module>wos-tgwatcher</module>
 	</modules>
 
 	<repositories>

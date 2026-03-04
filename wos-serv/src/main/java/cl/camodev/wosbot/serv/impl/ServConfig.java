@@ -154,4 +154,47 @@ public class ServConfig {
 		}
 	}
 
+	/**
+	 * Creates or updates a global (non-profile) configuration value.
+	 *
+	 * @param key   The configuration key to update
+	 * @param value The new value to set
+	 * @return true if the operation was successful, false otherwise
+	 */
+	public boolean updateGlobalConfig(EnumConfigurationKey key, String value) {
+		try {
+			List<Config> configs = iConfigRepository.getGlobalConfigs();
+			Config config = configs != null
+					? configs.stream().filter(c -> c.getKey().equals(key.name())).findFirst().orElse(null)
+					: null;
+
+			if (config == null) {
+				TpConfig tpConfig = iConfigRepository.getTpConfig(TpConfigEnum.GLOBAL_CONFIG);
+				if (tpConfig == null) {
+					logger.error("Could not find GLOBAL_CONFIG type in database");
+					return false;
+				}
+				config = new Config();
+				config.setKey(key.name());
+				config.setValue(value);
+				config.setTpConfig(tpConfig);
+				boolean created = iConfigRepository.addConfig(config);
+				if (created) {
+					logger.info("Global configuration {} created with value: {}", key.name(), value);
+				}
+				return created;
+			} else {
+				config.setValue(value);
+				boolean saved = iConfigRepository.saveConfig(config);
+				if (saved) {
+					logger.info("Global configuration {} updated to: {}", key.name(), value);
+				}
+				return saved;
+			}
+		} catch (Exception e) {
+			logger.error("Error updating global configuration {}: {}", key.name(), e.getMessage(), e);
+			return false;
+		}
+	}
+
 }
