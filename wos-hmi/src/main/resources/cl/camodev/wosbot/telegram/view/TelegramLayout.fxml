@@ -209,6 +209,12 @@
                                                         </HBox>
                                                         <HBox spacing="0">
                                                             <children>
+                                                                <Label minWidth="100" style="-fx-text-fill: #80deea; -fx-font-weight: bold;" text="/queue" />
+                                                                <Label style="-fx-text-fill: #cccccc; -fx-font-size: 11;" text="Task queue with schedule/remove/run" wrapText="true" />
+                                                            </children>
+                                                        </HBox>
+                                                        <HBox spacing="0">
+                                                            <children>
                                                                 <Label minWidth="100" style="-fx-text-fill: #b0bec5; -fx-font-weight: bold;" text="/help" />
                                                                 <Label style="-fx-text-fill: #cccccc; -fx-font-size: 11;" text="Show all commands in Telegram" wrapText="true" />
                                                             </children>

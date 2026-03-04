@@ -328,6 +328,7 @@ public class TelegramWatcher {
           + "`/stopbot`     — Pause the automation routines\n"
           + "`/status`      — Show whether automation is running\n"
           + "`/screenshot`  — Capture & send emulator screen\n"
+          + "`/queue`       — Show task queue with schedule/remove/execute controls\n"
           + "\n"
           + "❓ *Other*\n"
           + "`/help`        — Show this message\n"
