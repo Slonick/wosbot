@@ -292,7 +292,8 @@ public class InitializeTask extends DelayedTask {
 	 * <p>
 	 * Strategy:
 	 * <ol>
-	 * <li>Closes the emulator (clean slate)</li>
+	 * <li>Performs an ADB health check (restarts ADB if needed)</li>
+	 * <li>Closes the emulator (clean slate, also invalidates ADB caches)</li>
 	 * <li>Resets isStarted flag (will re-launch emulator on retry)</li>
 	 * <li>Sets recurring=true (triggers immediate re-execution)</li>
 	 * </ol>
@@ -302,7 +303,19 @@ public class InitializeTask extends DelayedTask {
 	 * the full initialization flow again, including relaunching the emulator.
 	 */
 	private void handleHomeScreenNotFound() {
-		logError("Home screen not found after multiple attempts. Restarting the emulator.");
+		logError("Home screen not found after multiple attempts. Restarting emulator.");
+
+		// Perform ADB health check before closing emulator
+		// This may restart the ADB bridge if it's degraded
+		logInfo("Performing ADB health check before emulator restart...");
+		boolean adbHealthy = emuManager.performAdbHealthCheck(EMULATOR_NUMBER);
+		if (adbHealthy) {
+			logInfo("ADB health check passed. Proceeding with emulator restart.");
+		} else {
+			logWarning("ADB health check failed even after recovery attempts. "
+					+ "Will still try to restart emulator.");
+		}
+
 		emuManager.closeEmulator(EMULATOR_NUMBER);
 		isStarted = false;
 		setRecurring(true); // Trigger immediate retry

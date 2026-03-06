@@ -393,11 +393,11 @@ public abstract class Emulator {
 	}
 
 	/**
-	 * Captures a screenshot from the emulator.
+	 * Captures a screenshot from the emulator (single attempt, no retry).
 	 * @param emulatorNumber Emulator identifier
 	 * @return DTORawImage with raw screenshot data
 	 */
-    public DTORawImage captureScreenshot(String emulatorNumber)  {
+    private DTORawImage captureScreenshotInternal(String emulatorNumber)  {
         long startTime = System.currentTimeMillis();
         logger.debug("=== Screenshot Capture Started === Emulator: {}", emulatorNumber);
 
@@ -492,6 +492,59 @@ public abstract class Emulator {
     }
 
 	/**
+	 * Captures a screenshot with retry logic and ADB recovery.
+	 * <p>
+	 * Attempts up to 3 times. On failure, invalidates the device cache and
+	 * restarts the ADB bridge before retrying. This prevents stale ADB
+	 * connections from causing persistent screenshot failures.
+	 *
+	 * @param emulatorNumber Emulator identifier
+	 * @return DTORawImage with raw screenshot data
+	 * @throws RuntimeException if all attempts fail
+	 */
+    public DTORawImage captureScreenshot(String emulatorNumber) {
+        int maxAttempts = 3;
+        Exception lastException = null;
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                return captureScreenshotInternal(emulatorNumber);
+            } catch (Exception e) {
+                lastException = e;
+                logger.warn("Screenshot attempt {}/{} failed for emulator {}: {}",
+                        attempt, maxAttempts, emulatorNumber, e.getMessage());
+
+                if (attempt < maxAttempts) {
+                    // Invalidate stale device cache
+                    invalidateDeviceCache(emulatorNumber);
+
+                    if (attempt >= 2) {
+                        // On second failure, restart ADB bridge
+                        logger.info("Restarting ADB bridge after repeated screenshot failures (attempt {})", attempt);
+                        try {
+                            restartAdb();
+                            Thread.sleep(2000); // Wait for ADB to stabilize
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            throw new RuntimeException("Interrupted during ADB restart for screenshot retry", ie);
+                        }
+                    } else {
+                        try {
+                            Thread.sleep(1000); // Brief pause before retry
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            throw new RuntimeException("Interrupted during screenshot retry", ie);
+                        }
+                    }
+                }
+            }
+        }
+
+        logger.error("All {} screenshot attempts failed for emulator {}", maxAttempts, emulatorNumber);
+        throw new RuntimeException("Error capturing screenshot", lastException);
+    }
+
+	/**
 	 * Simulates a tap event at a random point within the given area.
 	 * @param emulatorNumber Emulator identifier
 	 * @param point1 First corner
@@ -527,6 +580,7 @@ public abstract class Emulator {
 
 	/**
 	 * Restarts the ADB bridge using the project's ADB executable.
+	 * Also invalidates all device and running status caches.
 	 */
 	public void restartAdb() {
 		AndroidDebugBridge.disconnectBridge(5000, TimeUnit.MILLISECONDS);
@@ -536,7 +590,144 @@ public abstract class Emulator {
 		String adbPath = getProjectAdbPath();
 		logger.info("Restarting ADB bridge with path: {}", adbPath);
 		bridge = AndroidDebugBridge.createBridge(adbPath, true, 5000, TimeUnit.MILLISECONDS);
-		logger.info("ADB restarted successfully");
+
+		// Invalidate all caches after ADB restart
+		deviceCache.clear();
+		deviceCacheTimestamp.clear();
+		runningStatusCache.clear();
+		runningStatusTimestamp.clear();
+		logger.info("ADB restarted successfully, all caches invalidated");
+	}
+
+	/**
+	 * Performs an ADB health check by verifying the bridge is initialized,
+	 * the device is discoverable, and a basic shell command succeeds.
+	 * <p>
+	 * If the health check fails, attempts to restart ADB and re-verify.
+	 *
+	 * @param emulatorNumber Emulator identifier
+	 * @return true if ADB is healthy (or was recovered), false if unrecoverable
+	 */
+	public boolean performAdbHealthCheck(String emulatorNumber) {
+		logger.info("Performing ADB health check for emulator {}", emulatorNumber);
+
+		// Phase 1: Quick check with current bridge
+		if (checkAdbConnectivity(emulatorNumber)) {
+			logger.info("ADB health check passed for emulator {}", emulatorNumber);
+			return true;
+		}
+
+		// Phase 2: Restart ADB and retry
+		logger.warn("ADB health check failed for emulator {}. Restarting ADB bridge...", emulatorNumber);
+		try {
+			restartAdb();
+			Thread.sleep(3000); // Wait for ADB to stabilize after restart
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			logger.warn("Interrupted during ADB health check restart");
+			return false;
+		}
+
+		if (checkAdbConnectivity(emulatorNumber)) {
+			logger.info("ADB health check passed after ADB restart for emulator {}", emulatorNumber);
+			return true;
+		}
+
+		// Phase 3: Kill adb server externally and re-initialize
+		logger.warn("ADB still unhealthy after bridge restart. Killing ADB server process...");
+		try {
+			killAdbServer();
+			Thread.sleep(2000);
+			restartAdb();
+			Thread.sleep(3000);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			logger.warn("Interrupted during ADB server kill and restart");
+			return false;
+		}
+
+		boolean recovered = checkAdbConnectivity(emulatorNumber);
+		if (recovered) {
+			logger.info("ADB health check passed after full ADB server restart for emulator {}", emulatorNumber);
+		} else {
+			logger.error("ADB health check FAILED after all recovery attempts for emulator {}", emulatorNumber);
+		}
+		return recovered;
+	}
+
+	/**
+	 * Verifies ADB connectivity by finding the device and executing a test command.
+	 *
+	 * @param emulatorNumber Emulator identifier
+	 * @return true if the device is reachable and responds to commands
+	 */
+	private boolean checkAdbConnectivity(String emulatorNumber) {
+		try {
+			// Invalidate cache to force a fresh lookup
+			invalidateDeviceCache(emulatorNumber);
+
+			IDevice device = findDevice(emulatorNumber);
+			if (device == null) {
+				logger.debug("ADB connectivity check: device not found for emulator {}", emulatorNumber);
+				return false;
+			}
+
+			if (!device.isOnline()) {
+				logger.debug("ADB connectivity check: device offline for emulator {}", emulatorNumber);
+				return false;
+			}
+
+			// Execute a lightweight test command to verify the connection actually works
+			CollectingOutputReceiver receiver = new CollectingOutputReceiver();
+			device.executeShellCommand("echo adb_ok", receiver, 5000, TimeUnit.MILLISECONDS);
+			String output = receiver.getOutput().trim();
+
+			if (output.contains("adb_ok")) {
+				logger.debug("ADB connectivity check: shell command succeeded for emulator {}", emulatorNumber);
+				return true;
+			} else {
+				logger.debug("ADB connectivity check: unexpected response '{}' for emulator {}", output, emulatorNumber);
+				return false;
+			}
+		} catch (Exception e) {
+			logger.debug("ADB connectivity check failed for emulator {}: {}", emulatorNumber, e.getMessage());
+			return false;
+		}
+	}
+
+	/**
+	 * Kills the ADB server process externally using 'adb kill-server'.
+	 * This is a last resort when the ddmlib bridge is unresponsive.
+	 */
+	private void killAdbServer() {
+		try {
+			String adbPath = getProjectAdbPath();
+			logger.info("Killing ADB server with: {} kill-server", adbPath);
+			ProcessBuilder pb = new ProcessBuilder(adbPath, "kill-server");
+			pb.directory(new File(adbPath).getParentFile());
+			Process process = pb.start();
+			boolean finished = process.waitFor(10, TimeUnit.SECONDS);
+			if (!finished) {
+				process.destroyForcibly();
+				logger.warn("ADB kill-server timed out, forcibly destroyed");
+			} else {
+				logger.info("ADB server killed successfully");
+			}
+		} catch (Exception e) {
+			logger.error("Failed to kill ADB server: {}", e.getMessage());
+		}
+	}
+
+	/**
+	 * Invalidates all caches for a specific emulator.
+	 * Should be called when closing or restarting an emulator.
+	 *
+	 * @param emulatorNumber Emulator identifier
+	 */
+	public void invalidateAllCaches(String emulatorNumber) {
+		invalidateDeviceCache(emulatorNumber);
+		invalidateRunningStatusCache(emulatorNumber);
+		logger.debug("All caches invalidated for emulator {}", emulatorNumber);
 	}
 
 	/**

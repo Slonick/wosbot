@@ -10,11 +10,13 @@ import cl.camodev.wosbot.console.enumerable.IdleBehavior;
 import cl.camodev.wosbot.emulator.model.EmulatorAux;
 import cl.camodev.wosbot.serv.impl.ServConfig;
 import cl.camodev.wosbot.serv.impl.ServScheduler;
+import cl.camodev.wosbot.launcher.view.LauncherLayoutController;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.TableCell;
@@ -53,6 +55,12 @@ public class EmuConfigLayoutController {
 
 	@FXML
 	private ComboBox<IdleBehavior> comboboxIdleBehavior;
+
+	@FXML
+	private CheckBox checkboxAutoStart;
+
+	@FXML
+	private TextField textfieldAutoStartMinutes;
 
 	private final FileChooser fileChooser = new FileChooser();
 
@@ -94,6 +102,10 @@ public class EmuConfigLayoutController {
 					}
 					selected.setActive(true);
 					tableviewEmulators.refresh();
+					// Auto-save active emulator
+					ServScheduler.getServices().saveEmulatorPath(
+							EnumConfigurationKey.CURRENT_EMULATOR_STRING.name(),
+							selected.getEmulatorType().name());
 				});
 			}
 
@@ -127,6 +139,10 @@ public class EmuConfigLayoutController {
 						}
 						emulator.setPath(selectedFile.getParent());
 						tableviewEmulators.refresh();
+						// Auto-save emulator path
+						ServScheduler.getServices().saveEmulatorPath(
+								emulator.getEmulatorType().getConfigKey(),
+								selectedFile.getParent());
 					}
 				});
 			}
@@ -142,19 +158,85 @@ public class EmuConfigLayoutController {
 		tableviewEmulators.setItems(emulatorList);
 
 		textfieldMaxConcurrentInstances
-				.setText(globalConfig.getOrDefault(EnumConfigurationKey.MAX_RUNNING_EMULATORS_INT.name(), "1"));
-		textfieldMaxIdleTime.setText(globalConfig.getOrDefault(EnumConfigurationKey.MAX_IDLE_TIME_INT.name(), "15"));
+				.setText(globalConfig.getOrDefault(EnumConfigurationKey.MAX_RUNNING_EMULATORS_INT.name(),
+						EnumConfigurationKey.MAX_RUNNING_EMULATORS_INT.getDefaultValue()));
+		textfieldMaxIdleTime.setText(globalConfig.getOrDefault(EnumConfigurationKey.MAX_IDLE_TIME_INT.name(),
+				EnumConfigurationKey.MAX_IDLE_TIME_INT.getDefaultValue()));
+
+		// Auto-save max concurrent instances on focus lost
+		textfieldMaxConcurrentInstances.focusedProperty().addListener((obs, oldVal, newVal) -> {
+			if (!newVal) {
+				String val = textfieldMaxConcurrentInstances.getText();
+				if (!val.isEmpty()) {
+					ServScheduler.getServices().saveEmulatorPath(
+							EnumConfigurationKey.MAX_RUNNING_EMULATORS_INT.name(), val);
+				}
+			}
+		});
+
+		// Auto-save max idle time on focus lost
+		textfieldMaxIdleTime.focusedProperty().addListener((obs, oldVal, newVal) -> {
+			if (!newVal) {
+				String val = textfieldMaxIdleTime.getText();
+				if (!val.isEmpty()) {
+					ServScheduler.getServices().saveEmulatorPath(
+							EnumConfigurationKey.MAX_IDLE_TIME_INT.name(), val);
+				}
+			}
+		});
 
 		comboboxGameVersion.setItems(FXCollections.observableArrayList(GameVersion.values()));
 		String gameVersionName = globalConfig.getOrDefault(EnumConfigurationKey.GAME_VERSION_STRING.name(),
 				GameVersion.GLOBAL.name());
 		comboboxGameVersion.setValue(GameVersion.valueOf(gameVersionName));
 
+		// Auto-save game version on change
+		comboboxGameVersion.setOnAction(event -> {
+			GameVersion selected = comboboxGameVersion.getValue();
+			if (selected != null) {
+				ServScheduler.getServices().saveEmulatorPath(
+						EnumConfigurationKey.GAME_VERSION_STRING.name(), selected.name());
+			}
+		});
+
 		// Initialize the idle behavior combobox
 		comboboxIdleBehavior.setItems(FXCollections.observableArrayList(IdleBehavior.values()));
 		boolean idleBehaviorSendToBackground = Boolean.parseBoolean(
 				globalConfig.getOrDefault(EnumConfigurationKey.IDLE_BEHAVIOR_SEND_TO_BACKGROUND_BOOL.name(), "false"));
 		comboboxIdleBehavior.setValue(IdleBehavior.fromBoolean(idleBehaviorSendToBackground));
+
+		// Initialize auto-start fields
+		boolean autoStartEnabled = Boolean.parseBoolean(
+				globalConfig.getOrDefault(EnumConfigurationKey.AUTO_START_ENABLED_BOOL.name(), "false"));
+		checkboxAutoStart.setSelected(autoStartEnabled);
+		textfieldAutoStartMinutes.setText(
+				globalConfig.getOrDefault(EnumConfigurationKey.AUTO_START_DELAY_MINUTES_INT.name(), "5"));
+		textfieldAutoStartMinutes.disableProperty().bind(checkboxAutoStart.selectedProperty().not());
+
+		// Save auto-start settings instantly on change and re-evaluate timer
+		checkboxAutoStart.selectedProperty().addListener((obs, oldVal, newVal) -> {
+			ServScheduler.getServices().saveEmulatorPath(EnumConfigurationKey.AUTO_START_ENABLED_BOOL.name(),
+					String.valueOf(newVal));
+			LauncherLayoutController launcher = LauncherLayoutController.getInstance();
+			if (launcher != null) {
+				javafx.application.Platform.runLater(launcher::scheduleAutoStart);
+			}
+		});
+		textfieldAutoStartMinutes.focusedProperty().addListener((obs, oldVal, newVal) -> {
+			if (!newVal) { // lost focus
+				String minutes = textfieldAutoStartMinutes.getText();
+				if (minutes.isEmpty()) {
+					minutes = "5";
+					textfieldAutoStartMinutes.setText(minutes);
+				}
+				ServScheduler.getServices().saveEmulatorPath(
+						EnumConfigurationKey.AUTO_START_DELAY_MINUTES_INT.name(), minutes);
+				LauncherLayoutController launcher = LauncherLayoutController.getInstance();
+				if (launcher != null) {
+					javafx.application.Platform.runLater(launcher::scheduleAutoStart);
+				}
+			}
+		});
 
 		// Add listener to show warning when "Close Game" is selected
 		comboboxIdleBehavior.setOnAction(event -> {
@@ -166,54 +248,6 @@ public class EmuConfigLayoutController {
 				showConcurrentInstanceWarning();
 			}
 		});
-	}
-
-	// Saves the configuration, iterating through the list to extract the path and
-	// determine the active emulator
-	@FXML
-	private void handleSaveConfiguration() {
-		String activeEmulatorName = null;
-		for (EmulatorAux emulator : emulatorList) {
-			if (emulator.isActive()) {
-				activeEmulatorName = emulator.getEmulatorType().name();
-				break;
-			}
-		}
-		if (activeEmulatorName == null) {
-			showError("Missing active emulator. Please select one.");
-			return;
-		}
-
-		// Saves the maximum number of instances
-		String maxInstances = textfieldMaxConcurrentInstances.getText();
-		if (maxInstances.isEmpty()) {
-			showError("Max instances cannot be empty.");
-			return;
-		}
-
-		// Saves the maximum idle time
-		String maxIdleTime = textfieldMaxIdleTime.getText();
-		if (maxIdleTime.isEmpty()) {
-			showError("Max idle time cannot be empty.");
-			return;
-		}
-		// Saves the configuration using the key defined in each enum value
-		for (EmulatorAux emulator : emulatorList) {
-			ServScheduler.getServices().saveEmulatorPath(emulator.getEmulatorType().getConfigKey(), emulator.getPath());
-		}
-
-		GameVersion selectedGameVersion = comboboxGameVersion.getValue();
-		if (selectedGameVersion != null) {
-			ServScheduler.getServices().saveEmulatorPath(EnumConfigurationKey.GAME_VERSION_STRING.name(),
-					selectedGameVersion.name());
-		}
-
-		ServScheduler.getServices().saveEmulatorPath(EnumConfigurationKey.MAX_IDLE_TIME_INT.name(), maxIdleTime);
-		ServScheduler.getServices().saveEmulatorPath(EnumConfigurationKey.MAX_RUNNING_EMULATORS_INT.name(),
-				maxInstances);
-		ServScheduler.getServices().saveEmulatorPath(EnumConfigurationKey.CURRENT_EMULATOR_STRING.name(),
-				activeEmulatorName);
-		showInfo("Config saved successfully");
 	}
 
 	private File openFileChooser(String title) {
@@ -251,14 +285,6 @@ public class EmuConfigLayoutController {
 	private void showError(String message) {
 		Alert alert = new Alert(Alert.AlertType.ERROR);
 		alert.setTitle("Error");
-		alert.setHeaderText(null);
-		alert.setContentText(message);
-		alert.showAndWait();
-	}
-
-	private void showInfo(String message) {
-		Alert alert = new Alert(Alert.AlertType.INFORMATION);
-		alert.setTitle("Success");
 		alert.setHeaderText(null);
 		alert.setContentText(message);
 		alert.showAndWait();

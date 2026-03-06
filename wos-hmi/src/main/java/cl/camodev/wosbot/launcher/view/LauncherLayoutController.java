@@ -68,11 +68,16 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.util.Duration;
 import cl.camodev.wosbot.alliance.view.AllianceShopController;
 import cl.camodev.wosbot.telegram.view.TelegramLayoutController;
 import cl.camodev.wosbot.serv.impl.TelegramBotService;
 
 public class LauncherLayoutController implements IProfileLoadListener, IStaminaChangeListener {
+
+    private static LauncherLayoutController instance;
 
     private final Map<String, Object> moduleControllers = new HashMap<>();
     @FXML
@@ -100,10 +105,17 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
     private ProfileAux currentProfile = null; // Perfil actualmente cargado
     private boolean allQueuesPaused = false;
     private final Map<Long, DTOQueueProfileState> activeQueueStates = new HashMap<>();
+    private Timeline autoStartTimeline;
+    private int autoStartSecondsRemaining;
 
     public LauncherLayoutController(Stage stage) {
         this.stage = stage;
+        instance = this;
         StaminaService.getServices().addStaminaChangeListener(this);
+    }
+
+    public static LauncherLayoutController getInstance() {
+        return instance;
     }
 
     @FXML
@@ -120,6 +132,7 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
         buttonStartStop.setDisable(false);
         buttonPauseResume.setDisable(true);
         configurePauseMenu();
+        scheduleAutoStart();
 
     }
 
@@ -484,6 +497,7 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
     public void onBotStateChange(DTOBotState botState) {
         if (botState != null) {
             if (botState.getRunning()) {
+                cancelAutoStart();
                 if (botState.getPaused() != null && botState.getPaused()) {
                     // Bot is running but paused
                     buttonStartStop.setText("Stop");
@@ -510,6 +524,7 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
                 buttonPauseResume.setDisable(true);
                 resetPauseStates();
                 estado = false;
+                scheduleAutoStart();
             }
         }
     }
@@ -544,6 +559,7 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
 
     @FXML
     public void handleButtonStartStop(ActionEvent event) {
+        cancelAutoStart();
         Thread startStopThread = Thread.ofVirtual().unstarted(() -> {
             if (!estado) {
                 Platform.runLater(() -> {
@@ -731,6 +747,58 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
         activeQueueStates.clear();
         refreshPauseMenuItems();
         updatePauseButtonState();
+    }
+
+    public void scheduleAutoStart() {
+        cancelAutoStart();
+        HashMap<String, String> globalConfig = ServConfig.getServices().getGlobalConfig();
+        if (globalConfig == null) {
+            return;
+        }
+        boolean autoStartEnabled = Boolean.parseBoolean(
+                globalConfig.getOrDefault(EnumConfigurationKey.AUTO_START_ENABLED_BOOL.name(), "false"));
+        if (!autoStartEnabled) {
+            return;
+        }
+        int delayMinutes;
+        try {
+            delayMinutes = Integer.parseInt(
+                    globalConfig.getOrDefault(EnumConfigurationKey.AUTO_START_DELAY_MINUTES_INT.name(), "5"));
+        } catch (NumberFormatException e) {
+            delayMinutes = 5;
+        }
+        if (delayMinutes <= 0) {
+            return;
+        }
+        autoStartSecondsRemaining = delayMinutes * 60;
+        autoStartTimeline = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
+            autoStartSecondsRemaining--;
+            int mins = autoStartSecondsRemaining / 60;
+            int secs = autoStartSecondsRemaining % 60;
+            buttonStartStop.setText(String.format("Start (%02d:%02d)", mins, secs));
+            if (autoStartSecondsRemaining <= 0) {
+                cancelAutoStart();
+                Thread autoStartThread = Thread.ofVirtual().unstarted(() -> {
+                    Platform.runLater(() -> {
+                        buttonStartStop.setText("Starting...");
+                        buttonStartStop.setDisable(true);
+                    });
+                    actionController.startBot();
+                });
+                autoStartThread.setName("Auto-Start-Thread");
+                autoStartThread.start();
+            }
+        }));
+        autoStartTimeline.setCycleCount(Timeline.INDEFINITE);
+        autoStartTimeline.play();
+    }
+
+    private void cancelAutoStart() {
+        if (autoStartTimeline != null) {
+            autoStartTimeline.stop();
+            autoStartTimeline = null;
+            buttonStartStop.setText("Start Bot");
+        }
     }
 
     private void showProfileSelectionWarning() {

@@ -620,11 +620,12 @@ public class EmulatorManager {
     }
 
     /**
-     * Closes the emulator.
+     * Closes the emulator and invalidates all ADB caches for it.
      */
     public void closeEmulator(String emulatorNumber) {
         checkEmulatorInitialized();
         emulator.closeEmulator(emulatorNumber);
+        emulator.invalidateAllCaches(emulatorNumber);
     }
 
     public void launchApp(String emulatorNumber, String packageName) {
@@ -686,6 +687,28 @@ public class EmulatorManager {
     public void restartAdbServer() {
         checkEmulatorInitialized();
         emulator.restartAdb();
+    }
+
+    /**
+     * Performs an ADB health check for the specified emulator.
+     * Verifies device connectivity and attempts ADB recovery if needed.
+     *
+     * @param emulatorNumber Emulator identifier
+     * @return true if ADB is healthy (or was recovered), false if unrecoverable
+     */
+    public boolean performAdbHealthCheck(String emulatorNumber) {
+        checkEmulatorInitialized();
+        return emulator.performAdbHealthCheck(emulatorNumber);
+    }
+
+    /**
+     * Invalidates all ADB caches (device + running status) for the specified emulator.
+     *
+     * @param emulatorNumber Emulator identifier
+     */
+    public void invalidateAllCaches(String emulatorNumber) {
+        checkEmulatorInitialized();
+        emulator.invalidateAllCaches(emulatorNumber);
     }
 
     /**

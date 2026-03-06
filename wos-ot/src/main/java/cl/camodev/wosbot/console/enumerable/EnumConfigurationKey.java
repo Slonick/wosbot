@@ -18,7 +18,7 @@ public enum EnumConfigurationKey {
 	BOOL_DEBUG("false", Boolean.class),
 	GAME_VERSION_STRING("GLOBAL", String.class),
 	MAX_RUNNING_EMULATORS_INT("1", Integer.class),
-	MAX_IDLE_TIME_INT("1", Integer.class),
+	MAX_IDLE_TIME_INT("15", Integer.class),
 	IDLE_BEHAVIOR_SEND_TO_BACKGROUND_BOOL("false", Boolean.class),
 	MUMU_PATH_STRING("C:\\Program Files\\Netease\\MuMuPlayer\\nx_main", String.class),
 	MEMU_PATH_STRING("", String.class),
@@ -28,6 +28,8 @@ public enum EnumConfigurationKey {
 	TELEGRAM_BOT_ENABLED_BOOL("false", Boolean.class),
 	TELEGRAM_BOT_TOKEN_STRING("", String.class),
 	TELEGRAM_ALLOWED_CHAT_ID_STRING("", String.class),
+	AUTO_START_ENABLED_BOOL("false", Boolean.class),
+	AUTO_START_DELAY_MINUTES_INT("5", Integer.class),
 
     // ========================================================================
     // CITY AND BUILDING MANAGEMENT
