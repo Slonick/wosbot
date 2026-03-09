@@ -201,9 +201,9 @@ public class EmuConfigLayoutController {
 
 		// Initialize the idle behavior combobox
 		comboboxIdleBehavior.setItems(FXCollections.observableArrayList(IdleBehavior.values()));
-		boolean idleBehaviorSendToBackground = Boolean.parseBoolean(
-				globalConfig.getOrDefault(EnumConfigurationKey.IDLE_BEHAVIOR_SEND_TO_BACKGROUND_BOOL.name(), "false"));
-		comboboxIdleBehavior.setValue(IdleBehavior.fromBoolean(idleBehaviorSendToBackground));
+		IdleBehavior idleBehavior = IdleBehavior.fromString(
+				globalConfig.getOrDefault(EnumConfigurationKey.IDLE_BEHAVIOR_STRING.name(), "CLOSE_EMULATOR"));
+		comboboxIdleBehavior.setValue(idleBehavior);
 
 		// Initialize auto-start fields
 		boolean autoStartEnabled = Boolean.parseBoolean(
@@ -241,12 +241,14 @@ public class EmuConfigLayoutController {
 		// Add listener to show warning when "Close Game" is selected
 		comboboxIdleBehavior.setOnAction(event -> {
 			IdleBehavior selectedBehavior = comboboxIdleBehavior.getValue();
-			ServScheduler.getServices().saveEmulatorPath(
-					EnumConfigurationKey.IDLE_BEHAVIOR_SEND_TO_BACKGROUND_BOOL.name(),
-					selectedBehavior.shouldSendToBackground() ? "true" : "false");
-			if (selectedBehavior != null && selectedBehavior.shouldSendToBackground()) {
-				showConcurrentInstanceWarning();
-			}
+			if (selectedBehavior != null) {
+                ServScheduler.getServices().saveEmulatorPath(
+                        EnumConfigurationKey.IDLE_BEHAVIOR_STRING.name(),
+                        selectedBehavior.name());
+                if (selectedBehavior.shouldSendToBackground()) {
+                    showConcurrentInstanceWarning();
+                }
+            }
 		});
 	}
 

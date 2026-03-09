@@ -33,12 +33,12 @@ public class DoExplorationTask extends DelayedTask {
             logInfo("Exploring...");
 
             tapRandomPoint(new DTOPoint(240, 1150), new DTOPoint(480, 1200));
-            sleepTask(200);
+            sleepTask(300);
             boolean keepFighting = true;
 
             while (keepFighting) {
                 tapRandomPoint(new DTOPoint(55, 1170), new DTOPoint(330, 1220));
-                sleepTask(200);
+                sleepTask(300);
                 tapRandomPoint(new DTOPoint(390, 1170), new DTOPoint(670, 1220));
 
                 boolean battleResultFound = false;
@@ -52,7 +52,7 @@ public class DoExplorationTask extends DelayedTask {
                         logInfo("Victory! Continue...");
                         battleResultFound = true;
                         tapRandomPoint(new DTOPoint(400, 990), new DTOPoint(658, 1038));
-                        sleepTask(200);
+                        sleepTask(300);
                         break; 
                     }
 
@@ -66,6 +66,18 @@ public class DoExplorationTask extends DelayedTask {
                         keepFighting = false; 
                         this.reschedule(LocalDateTime.now().plusHours(1));
                         return; 
+                    }
+                    
+                    if (i > 1) {
+                        DTOImageSearchResult exploreIdle = templateSearchHelper.searchTemplate(
+                                EnumTemplates.EXPLORATION_BUTTON,
+                                SearchConfig.builder().withMaxAttempts(1).withDelay(0L).build());
+                        if (exploreIdle != null && exploreIdle.isFound()) {
+                            logWarning("Exploration button detected, battle did not start. Stopping.");
+                            battleResultFound = true; // Prevents the generic timeout message
+                            keepFighting = false;
+                            break;
+                        }
                     }
 
                     sleepTask(5000);

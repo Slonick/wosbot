@@ -14,6 +14,7 @@ import cl.camodev.utiles.UtilTime;
 import cl.camodev.wosbot.console.enumerable.EnumConfigurationKey;
 import cl.camodev.wosbot.console.enumerable.EnumTemplates;
 import cl.camodev.wosbot.console.enumerable.EnumTpMessageSeverity;
+import cl.camodev.wosbot.console.enumerable.IdleBehavior;
 import cl.camodev.wosbot.console.enumerable.TpDailyTaskEnum;
 import cl.camodev.wosbot.emulator.EmulatorManager;
 import cl.camodev.wosbot.ex.ADBConnectionException;
@@ -537,16 +538,19 @@ public class TaskQueue {
 
     // Idle time management methods
     private void idlingEmulator(LocalDateTime delayUntil) {
-        boolean sendToBackground = Optional.ofNullable(ServConfig.getServices().getGlobalConfig())
-                .map(cfg -> cfg.getOrDefault(EnumConfigurationKey.IDLE_BEHAVIOR_SEND_TO_BACKGROUND_BOOL.name(),
-                        EnumConfigurationKey.IDLE_BEHAVIOR_SEND_TO_BACKGROUND_BOOL.getDefaultValue()))
-                .map(Boolean::parseBoolean).orElse(Boolean
-                        .parseBoolean(EnumConfigurationKey.IDLE_BEHAVIOR_SEND_TO_BACKGROUND_BOOL.getDefaultValue()));
+        IdleBehavior behavior = IdleBehavior.fromString(Optional.ofNullable(ServConfig.getServices().getGlobalConfig())
+                .map(cfg -> cfg.getOrDefault(EnumConfigurationKey.IDLE_BEHAVIOR_STRING.name(),
+                        EnumConfigurationKey.IDLE_BEHAVIOR_STRING.getDefaultValue()))
+                .orElse(EnumConfigurationKey.IDLE_BEHAVIOR_STRING.getDefaultValue()));
 
-        if (sendToBackground) {
+        if (behavior == IdleBehavior.SEND_TO_BACKGROUND) {
             // Send game to background (home screen), keep emulator and game running
             emuManager.sendGameToBackground(profile.getEmulatorNumber());
             logInfo("Sending game to background due to large inactivity. Next task: " + delayUntil);
+        } else if (behavior == IdleBehavior.PC_SLEEP) {
+            logInfo("PC Sleep is enabled for idle behavior. Suspending PC...");
+            schedulePcWakeUpAndSleep(delayUntil);
+            return;
         } else {
             // Close the entire emulator (original behavior)
             emuManager.closeEmulator(profile.getEmulatorNumber());
@@ -833,4 +837,92 @@ public class TaskQueue {
     public DTOProfiles getProfile() {
         return profile;
     }
+
+	private void schedulePcWakeUpAndSleep(LocalDateTime wakeUpTime) {
+		try {
+			// Close emulator before sleep
+			emuManager.closeEmulator(profile.getEmulatorNumber());
+			emuManager.releaseEmulatorSlot(profile);
+			logInfo("Emulator closed for PC sleep.");
+
+			// Calculate when to wake up. Wake up 1 minutes before the task.
+			LocalDateTime actualWakeTime = wakeUpTime.minusMinutes(1);
+			if (actualWakeTime.isBefore(LocalDateTime.now())) {
+				actualWakeTime = LocalDateTime.now().plusMinutes(1);
+			}
+
+			java.time.format.DateTimeFormatter timeFormatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
+			String timeStr = actualWakeTime.format(timeFormatter);
+			java.time.format.DateTimeFormatter dateFormatter = java.time.format.DateTimeFormatter.ofPattern("MM/dd/yyyy");
+			String dateStr = actualWakeTime.format(dateFormatter);
+
+			String botJarPath = "C:\\Users\\parad\\OneDrive\\Desktop\\wosbot-main\\wos-hmi\\target\\wos-bot-1.7.0.jar";
+
+			// Step 1: Enable wake timers in the active power plan
+			logInfo("Enabling wake timers in Windows power settings...");
+			new ProcessBuilder("powercfg", "-SETACVALUEINDEX", "SCHEME_CURRENT", "238c9fa8-0aad-41ed-83f4-97be242c8f20", "bd3b718a-0680-4d9d-8ab2-e1d2b4ac806d", "1").start().waitFor();
+			new ProcessBuilder("powercfg", "-SETDCVALUEINDEX", "SCHEME_CURRENT", "238c9fa8-0aad-41ed-83f4-97be242c8f20", "bd3b718a-0680-4d9d-8ab2-e1d2b4ac806d", "1").start().waitFor();
+			new ProcessBuilder("powercfg", "-SETACTIVE", "SCHEME_CURRENT").start().waitFor();
+
+			// Step 2: Create scheduled task using schtasks.exe
+			logInfo("Scheduling PC wake up at " + dateStr + " " + timeStr);
+			String taskRunCommand = "javaw.exe -jar \"" + botJarPath + "\" --autostart";
+
+			ProcessBuilder schtasksPb = new ProcessBuilder(
+					"schtasks", "/create",
+					"/TN", "WosBot_AutoStart",
+					"/TR", taskRunCommand,
+					"/SC", "ONCE",
+					"/ST", timeStr,
+					"/SD", dateStr,
+					"/RL", "HIGHEST", // Run with highest privileges
+					"/F"
+			);
+			schtasksPb.redirectErrorStream(true);
+			Process schtasksProcess = schtasksPb.start();
+			int exitCode = schtasksProcess.waitFor();
+			logInfo("schtasks registration exit code: " + exitCode);
+
+			if (exitCode != 0) {
+				logError("Failed to register scheduled task! Wake-up will not work.");
+				return;
+			}
+
+			// Step 3: Enable WakeToRun and Battery settings on the task (Exhaustive settings for S0/S3)
+			java.nio.file.Path wakeScriptPath = java.nio.file.Paths.get(System.getProperty("user.dir"), "wosbot_wake_setup.ps1");
+			String wakeScript = 
+					"$settings = New-ScheduledTaskSettingsSet -WakeToRun -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -Priority 1\n" +
+					"$settings.DisallowStartIfOnBatteries = $false\n" +
+					"Set-ScheduledTask -TaskName 'WosBot_AutoStart' -Settings $settings\n";
+			java.nio.file.Files.writeString(wakeScriptPath, wakeScript);
+
+			logInfo("Task scheduled. Configuring wake settings...");
+			ProcessBuilder wakePb = new ProcessBuilder(
+					"powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", wakeScriptPath.toString()
+			);
+			wakePb.redirectErrorStream(true);
+			Process wakeProcess = wakePb.start();
+			int wakeExitCode = wakeProcess.waitFor();
+			logInfo("Wake settings setup exit code: " + wakeExitCode);
+
+			// Step 4: Put PC to sleep (fire and let OS suspend everything)
+			logInfo("Initiating PC sleep...");
+			java.nio.file.Path sleepScriptPath = java.nio.file.Paths.get(System.getProperty("user.dir"), "wosbot_sleep.ps1");
+			String sleepScript = 
+					"Start-Sleep -Seconds 2\n" +
+					"Add-Type -AssemblyName System.Windows.Forms\n" +
+					"[System.Windows.Forms.Application]::SetSuspendState('Suspend', $false, $false)\n";
+			java.nio.file.Files.writeString(sleepScriptPath, sleepScript);
+
+			ProcessBuilder sleepPb = new ProcessBuilder(
+					"powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", sleepScriptPath.toString()
+			);
+			sleepPb.start();
+
+			System.exit(0);
+
+		} catch (Exception e) {
+			logError("Error scheduling PC wake up or putting PC to sleep: " + e.getMessage());
+		}
+	}
 }

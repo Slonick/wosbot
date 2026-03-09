@@ -2,7 +2,8 @@ package cl.camodev.wosbot.console.enumerable;
 
 public enum IdleBehavior {
     CLOSE_EMULATOR("Close Emulator", false),
-    SEND_TO_BACKGROUND("Close Game", true);
+    SEND_TO_BACKGROUND("Close Game", true),
+    PC_SLEEP("PC Sleep", false);
 
     private final String displayName;
     private final boolean sendToBackground;
@@ -25,7 +26,11 @@ public enum IdleBehavior {
         return displayName;
     }
 
-    public static IdleBehavior fromBoolean(boolean sendToBackground) {
-        return sendToBackground ? SEND_TO_BACKGROUND : CLOSE_EMULATOR;
+    public static IdleBehavior fromString(String name) {
+        try {
+            return IdleBehavior.valueOf(name);
+        } catch (IllegalArgumentException | NullPointerException e) {
+            return CLOSE_EMULATOR;
+        }
     }
 }

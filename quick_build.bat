@@ -4,8 +4,10 @@ echo ==========================================
 echo      WOS Bot Quick Recompile Script
 echo ==========================================
 
-echo Stopping any running Java processes...
+echo Stopping any running Java and ADB processes...
 taskkill /F /IM java.exe >nul 2>&1
+taskkill /F /IM javaw.exe >nul 2>&1
+taskkill /F /IM adb.exe >nul 2>&1
 timeout /t 2 >nul
 
 call mvn clean

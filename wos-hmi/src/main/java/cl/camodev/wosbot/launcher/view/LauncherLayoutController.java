@@ -580,6 +580,21 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
         startStopThread.start();
     }
 
+    public void forceStartBot() {
+        if (!estado) {
+            cancelAutoStart();
+            Thread startStopThread = Thread.ofVirtual().unstarted(() -> {
+                Platform.runLater(() -> {
+                    buttonStartStop.setText("Starting...");
+                    buttonStartStop.setDisable(true);
+                });
+                actionController.startBot();
+            });
+            startStopThread.setName("Force-Start-Thread");
+            startStopThread.start();
+        }
+    }
+
     @FXML
     public void handleButtonPauseResume(ActionEvent event) {
         toggleAllQueues();

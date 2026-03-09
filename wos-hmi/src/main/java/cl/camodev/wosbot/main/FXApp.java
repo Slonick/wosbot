@@ -60,6 +60,12 @@ public class FXApp extends Application {
 		// Mostrar la ventana primero para que JavaFX calcule los tamaños correctamente
 		stage.show();
 
+		if (getParameters().getRaw().contains("--autostart")) {
+			javafx.application.Platform.runLater(() -> {
+				controller.forceStartBot();
+			});
+		}
+
 		// Ahora restaurar el tamaño y posición guardados
 		double savedWidth = prefs.getDouble(KEY_W, DEFAULT_W);
 		double savedHeight = prefs.getDouble(KEY_H, DEFAULT_H);

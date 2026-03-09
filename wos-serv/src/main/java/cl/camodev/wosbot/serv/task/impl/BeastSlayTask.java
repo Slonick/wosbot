@@ -80,14 +80,13 @@ public class BeastSlayTask extends DelayedTask {
 
 			tapRandomPoint(new DTOPoint(270, 600), new DTOPoint(460, 630));
 			sleepTask(6000);
+			
 			DTOImageSearchResult attackBtn = templateSearchHelper.searchTemplate(
 					EnumTemplates.GAME_HOME_SHORTCUTS_ATTACK, SearchConfig.builder().build());
-			if (!attackBtn.isFound()) {
-				logWarning("Attack button not found on screen. Skipping this beast.");
-				tapBackButton();
-				continue;
+			if (attackBtn.isFound()) {
+				tapPoint(attackBtn.getPoint());
 			}
-			tapPoint(attackBtn.getPoint());
+			
 			sleepTask(3000);
 
 
