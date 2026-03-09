@@ -21,7 +21,7 @@ public class DoExplorationTask extends DelayedTask {
 
     protected void execute() {
         logInfo("Starting Do Exploration task...");
-
+        // Navigate to the exploration screen
         tapRandomPoint(new DTOPoint(40, 1190), new DTOPoint(100, 1250));
         sleepTask(500);
 
@@ -31,14 +31,27 @@ public class DoExplorationTask extends DelayedTask {
 
         if (result != null && result.isFound()) {
             logInfo("Exploring...");
-
+            // Click the explore button
             tapRandomPoint(new DTOPoint(240, 1150), new DTOPoint(480, 1200));
             sleepTask(300);
+            // A furnace lvl upgrade may be required. Check if the exploration button is still there, if it is, the battle screen did not appear.
+            DTOImageSearchResult exploreIdle = templateSearchHelper.searchTemplate(
+                    EnumTemplates.EXPLORATION_BUTTON,
+                    SearchConfig.builder().withMaxAttempts(1).withDelay(0L).build());
+            if (exploreIdle != null && exploreIdle.isFound()) {
+                logWarning("Exploration button still here, battle did not start.");
+                logInfo("Stopping task. Rescheduling.");
+                this.reschedule(LocalDateTime.now().plusHours(1));
+                return;
+            }
+
             boolean keepFighting = true;
 
             while (keepFighting) {
+                // button Fast deployment 
                 tapRandomPoint(new DTOPoint(55, 1170), new DTOPoint(330, 1220));
                 sleepTask(300);
+                // button Fight
                 tapRandomPoint(new DTOPoint(390, 1170), new DTOPoint(670, 1220));
 
                 boolean battleResultFound = false;
@@ -66,18 +79,6 @@ public class DoExplorationTask extends DelayedTask {
                         keepFighting = false; 
                         this.reschedule(LocalDateTime.now().plusHours(1));
                         return; 
-                    }
-                    
-                    if (i > 1) {
-                        DTOImageSearchResult exploreIdle = templateSearchHelper.searchTemplate(
-                                EnumTemplates.EXPLORATION_BUTTON,
-                                SearchConfig.builder().withMaxAttempts(1).withDelay(0L).build());
-                        if (exploreIdle != null && exploreIdle.isFound()) {
-                            logWarning("Exploration button detected, battle did not start. Stopping.");
-                            battleResultFound = true; // Prevents the generic timeout message
-                            keepFighting = false;
-                            break;
-                        }
                     }
 
                     sleepTask(5000);
