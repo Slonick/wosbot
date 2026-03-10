@@ -83,7 +83,7 @@ public class BeastSlayTask extends DelayedTask {
 			
 			DTOImageSearchResult attackBtn = templateSearchHelper.searchTemplate(
 					EnumTemplates.GAME_HOME_SHORTCUTS_ATTACK, SearchConfig.builder().build());
-			if (attackBtn.isFound()) {
+			if (attackBtn != null && attackBtn.isFound()) {
 				tapPoint(attackBtn.getPoint());
 			}
 			
