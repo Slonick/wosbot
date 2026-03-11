@@ -384,6 +384,14 @@ public class TaskQueue {
      * @return true if the Initialize task should proceed, false otherwise
      */
     private boolean shouldExecuteInitializeTask() {
+        // If Skip Tutorial is enabled, we bypass the standard InitializeTask
+        // because SkipTutorialTask handles its own initialization.
+        boolean skipTutorialEnabled = profile.getConfig(EnumConfigurationKey.SKIP_TUTORIAL_ENABLED_BOOL,
+                Boolean.class);
+        if (skipTutorialEnabled) {
+            return false;
+        }
+
         // Get the maximum idle time configuration desde ServConfig con fallback al
         // default
         int maxIdleMinutes = Optional.ofNullable(ServConfig.getServices().getGlobalConfig())

@@ -110,7 +110,16 @@ public class ServScheduler {
 						queueManager.createQueue(profile);
 						TaskQueue queue = queueManager.getQueue(profile.getId());
 
-						queue.addTask(DelayedTaskRegistry.create(TpDailyTaskEnum.INITIALIZE, profile));
+						boolean skipTutorialEnabled = profile.getConfig(EnumConfigurationKey.SKIP_TUTORIAL_ENABLED_BOOL,
+								Boolean.class);
+
+						if (skipTutorialEnabled) {
+							ServLogs.getServices().appendLog(EnumTpMessageSeverity.INFO, "ServScheduler",
+									profile.getName(), "Skip Tutorial enabled. Bypassing standard InitializeTask.");
+							queue.addTask(DelayedTaskRegistry.create(TpDailyTaskEnum.SKIP_TUTORIAL, profile));
+						} else {
+							queue.addTask(DelayedTaskRegistry.create(TpDailyTaskEnum.INITIALIZE, profile));
+						}
 
 						// load task using registry
 						EnumMap<EnumConfigurationKey, List<Supplier<DelayedTask>>> taskMappings = Arrays

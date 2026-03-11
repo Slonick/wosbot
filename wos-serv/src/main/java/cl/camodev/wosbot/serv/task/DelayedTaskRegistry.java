@@ -152,6 +152,10 @@ public class DelayedTaskRegistry {
                 // Dummy Task
                 registry.put(TpDailyTaskEnum.DUMMY_TASK,
                                 profile -> new DummyTask(profile, TpDailyTaskEnum.DUMMY_TASK));
+
+                // Skip Tutorial
+                registry.put(TpDailyTaskEnum.SKIP_TUTORIAL,
+                                profile -> new SkipTutorialTask(profile, TpDailyTaskEnum.SKIP_TUTORIAL));
         }
 
         /**

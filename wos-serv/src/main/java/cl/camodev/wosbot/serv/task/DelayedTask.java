@@ -22,6 +22,7 @@ import cl.camodev.wosbot.serv.task.helper.*;
 import cl.camodev.wosbot.serv.task.impl.ArenaTask;
 import cl.camodev.wosbot.serv.task.impl.BearTrapTask;
 import cl.camodev.wosbot.serv.task.impl.InitializeTask;
+import cl.camodev.wosbot.serv.task.impl.SkipTutorialTask;
 import cl.camodev.wosbot.ex.StopExecutionException;
 
 import java.time.Duration;
@@ -200,8 +201,8 @@ public abstract class DelayedTask implements Runnable, Delayed {
     public void run() {
         refreshProfileFromDatabase();
 
-        // InitializeTask has special handling
-        if (this instanceof InitializeTask) {
+        // InitializeTask and SkipTutorialTask have special handling
+        if (this instanceof InitializeTask || this instanceof SkipTutorialTask) {
             execute();
             return;
         }

@@ -3,10 +3,12 @@ package cl.camodev.wosbot.serv.task.impl;
 import cl.camodev.wosbot.console.enumerable.EnumConfigurationKey;
 import cl.camodev.wosbot.console.enumerable.EnumTemplates;
 import cl.camodev.wosbot.console.enumerable.TpDailyTaskEnum;
+import cl.camodev.wosbot.emulator.EmulatorManager;
 import cl.camodev.wosbot.ot.DTOImageSearchResult;
 import cl.camodev.wosbot.ot.DTOPoint;
 import cl.camodev.wosbot.ot.DTOProfiles;
 import cl.camodev.wosbot.ot.DTORawImage;
+import cl.camodev.wosbot.serv.impl.ServProfiles;
 import cl.camodev.wosbot.serv.task.DelayedTask;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,14 +19,49 @@ import java.util.List;
  * It spam clicks a specific area and occasionally searches for a hand pointer to click.
  */
 public class SkipTutorialTask extends DelayedTask {
+    private static final int HAND_CLICK_OFFSET_X = -73;
+    private static final int HAND_CLICK_OFFSET_Y = 88;
+
+
+    private boolean isStarted = false;
 
     public SkipTutorialTask(DTOProfiles profile, TpDailyTaskEnum tpTask) {
         super(profile, tpTask);
     }
 
+    private void ensureEmulatorRunning() {
+        logInfo("Checking emulator status...");
+
+        while (!isStarted) {
+            if (emuManager.isRunning(EMULATOR_NUMBER)) {
+                isStarted = true;
+                logInfo("Emulator is running.");
+            } else {
+                logInfo("Emulator not found. Attempting to start it...");
+                emuManager.launchEmulator(EMULATOR_NUMBER);
+                logInfo("Waiting 10 seconds before checking again.");
+                sleepTask(10000); // Wait for emulator to start
+            }
+        }
+    }
+
+    private void ensureGameRunning() {
+        if (!emuManager.isPackageRunning(EMULATOR_NUMBER, EmulatorManager.GAME.getPackageName())) {
+            logInfo("Whiteout Survival is not running. Launching the game...");
+            emuManager.launchApp(EMULATOR_NUMBER, EmulatorManager.GAME.getPackageName());
+            sleepTask(10000); // Wait for game to launch
+        } else {
+            logInfo("Whiteout Survival is already running.");
+        }
+    }
+
     @Override
     protected void execute() {
         logInfo("Starting Skip Tutorial Task...");
+
+        // Ensure emulator and game are running since InitializeTask might have been skipped
+        ensureEmulatorRunning();
+        ensureGameRunning();
 
         DTOPoint clickBoxTopLeft = new DTOPoint(588, 73);
         DTOPoint clickBoxBottomRight = new DTOPoint(677, 113);
@@ -34,7 +71,7 @@ public class SkipTutorialTask extends DelayedTask {
 
             // Check if task is still enabled in configuration
             try {
-                Boolean enabled = cl.camodev.wosbot.serv.impl.ServProfiles.getServices().getProfiles().stream()
+                Boolean enabled = ServProfiles.getServices().getProfiles().stream()
                         .filter(p -> p.getId().equals(profile.getId()))
                         .findFirst()
                         .map(p -> p.getConfig(EnumConfigurationKey.SKIP_TUTORIAL_ENABLED_BOOL, Boolean.class))
@@ -48,11 +85,6 @@ public class SkipTutorialTask extends DelayedTask {
                 logWarning("Failed to check Skip Tutorial task status: " + e.getMessage());
             }
 
-            // Spam click 30 times
-            for (int i = 0; i < 30; i++) {
-                tapRandomPoint(clickBoxTopLeft, clickBoxBottomRight);
-                sleepTask(250); // Small delay between spam clicks to prevent overloading ADB
-            }
 
             // Rapidly take 3 screenshots
             logInfo("Rapidly taking 3 screenshots...");
@@ -61,15 +93,36 @@ public class SkipTutorialTask extends DelayedTask {
                 screenshots.add(emuManager.captureScreenshotViaADB(EMULATOR_NUMBER));
             }
 
-            // Search each screenshot sequentially for the hand template
-            logInfo("Searching for hand template in screenshots...");
+            // Check for skip button in the latest screenshot
+            if (!screenshots.isEmpty()) {
+                DTORawImage latest = screenshots.get(screenshots.size() - 1);
+                DTOImageSearchResult skipResult = emuManager.searchTemplate(EMULATOR_NUMBER, latest, EnumTemplates.SKIP_TUTORIAL_BUTTON, 80.0);
+                if (skipResult != null && skipResult.isFound()) {
+                    logInfo("Skip button found! Clicking it.");
+                    tapPoint(skipResult.getPoint());
+                    sleepTask(50);
+                }
+            }
+
+            // Search each screenshot sequentially for the hand template and its mirror
+            logInfo("Searching for hand template and mirror in screenshots...");
             boolean handFound = false;
             for (DTORawImage rawImage : screenshots) {
                 DTOImageSearchResult result = emuManager.searchTemplate(EMULATOR_NUMBER, rawImage, EnumTemplates.SKIP_TUTORIAL_HAND, 80.0);
-                if (result != null && result.isFound()) {
-                    logInfo("Hand template found! Clicking it.");
-                    tapPoint(result.getPoint());
-                    sleepTask(500); // Give it some time to process the click
+                DTOImageSearchResult mirrorResult = emuManager.searchTemplate(EMULATOR_NUMBER, rawImage, EnumTemplates.SKIP_TUTORIAL_HAND_MIRROR, 80.0);
+
+                if ((result != null && result.isFound()) || (mirrorResult != null && mirrorResult.isFound())) {
+                    logInfo("Hand template or mirror found! Clicking it with offset.");
+                    DTOPoint adjustedPoint;
+                    if (result != null && result.isFound()) {
+                        DTOPoint handPoint = result.getPoint();
+                        adjustedPoint = new DTOPoint(handPoint.getX() + HAND_CLICK_OFFSET_X, handPoint.getY() + HAND_CLICK_OFFSET_Y);
+                    } else {
+                        // For mirrored hand, mirror the X offset as well
+                        DTOPoint handPoint = mirrorResult.getPoint();
+                        adjustedPoint = new DTOPoint(handPoint.getX() - HAND_CLICK_OFFSET_X, handPoint.getY() + HAND_CLICK_OFFSET_Y);
+                    }
+                    tapPoint(adjustedPoint);
                     handFound = true;
                     break;
                 }

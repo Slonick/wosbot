@@ -510,7 +510,10 @@ public enum EnumTemplates {
 	GAME_PROFILE_SETTINGS_SWITCH_CHARACTER_CONFIRM_BUTTON("/templates/profile/settings/switchcharacter/confirmButton.png"),  // Confirm button in character switch confirmation dialog (PLACEHOLDER - replace with actual template)
 	GAME_PROFILE_SETTINGS_SWITCH_CHARACTER_CANCEL_BUTTON("/templates/profile/settings/switchcharacter/cancelButton.png"),  // Cancel button in character switch confirmation dialog (PLACEHOLDER - replace with actual template)
 
-	SKIP_TUTORIAL_HAND("/templates/skip/hand.png");
+	SKIP_TUTORIAL_HAND("/templates/skip/hand.png"),
+	SKIP_TUTORIAL_HAND_MIRROR("/templates/skip/handMirror.png"),
+	SKIP_TUTORIAL_BUTTON("/templates/skip/skip.png");
+
 
 
 	// @formatter:on
