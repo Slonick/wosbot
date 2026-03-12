@@ -10,8 +10,6 @@ import cl.camodev.wosbot.ot.DTOProfiles;
 import cl.camodev.wosbot.ot.DTORawImage;
 import cl.camodev.wosbot.serv.impl.ServProfiles;
 import cl.camodev.wosbot.serv.task.DelayedTask;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Skip Tutorial Task.
@@ -86,17 +84,14 @@ public class SkipTutorialTask extends DelayedTask {
             }
 
 
-            // Rapidly take 3 screenshots
-            logInfo("Rapidly taking 3 screenshots...");
-            List<DTORawImage> screenshots = new ArrayList<>();
-            for (int i = 0; i < 3; i++) {
-                screenshots.add(emuManager.captureScreenshotViaADB(EMULATOR_NUMBER));
-            }
+            // Take a screenshot
+            logInfo("Taking screenshot...");
+            DTORawImage screenshot = emuManager.captureScreenshotViaADB(EMULATOR_NUMBER);
 
-            // Check for skip button in the latest screenshot
-            if (!screenshots.isEmpty()) {
-                DTORawImage latest = screenshots.get(screenshots.size() - 1);
-                DTOImageSearchResult skipResult = emuManager.searchTemplate(EMULATOR_NUMBER, latest, EnumTemplates.SKIP_TUTORIAL_BUTTON, 80.0);
+            // Check for skip button within specific coordinates (537,44 to 715,140)
+            if (screenshot != null) {
+                DTOImageSearchResult skipResult = emuManager.searchTemplate(EMULATOR_NUMBER, screenshot, EnumTemplates.SKIP_TUTORIAL_BUTTON, 
+                        new DTOPoint(537, 44), new DTOPoint(715, 140), 80.0);
                 if (skipResult != null && skipResult.isFound()) {
                     logInfo("Skip button found! Clicking it.");
                     tapPoint(skipResult.getPoint());
@@ -104,12 +99,11 @@ public class SkipTutorialTask extends DelayedTask {
                 }
             }
 
-            // Search each screenshot sequentially for the hand template and its mirror
-            logInfo("Searching for hand template and mirror in screenshots...");
-            boolean handFound = false;
-            for (DTORawImage rawImage : screenshots) {
-                DTOImageSearchResult result = emuManager.searchTemplate(EMULATOR_NUMBER, rawImage, EnumTemplates.SKIP_TUTORIAL_HAND, 80.0);
-                DTOImageSearchResult mirrorResult = emuManager.searchTemplate(EMULATOR_NUMBER, rawImage, EnumTemplates.SKIP_TUTORIAL_HAND_MIRROR, 80.0);
+            // Search for the hand template and its mirror
+            logInfo("Searching for hand template and mirror...");
+            if (screenshot != null) {
+                DTOImageSearchResult result = emuManager.searchTemplate(EMULATOR_NUMBER, screenshot, EnumTemplates.SKIP_TUTORIAL_HAND, 80.0);
+                DTOImageSearchResult mirrorResult = emuManager.searchTemplate(EMULATOR_NUMBER, screenshot, EnumTemplates.SKIP_TUTORIAL_HAND_MIRROR, 80.0);
 
                 if ((result != null && result.isFound()) || (mirrorResult != null && mirrorResult.isFound())) {
                     logInfo("Hand template or mirror found! Clicking it with offset.");
@@ -123,10 +117,10 @@ public class SkipTutorialTask extends DelayedTask {
                         adjustedPoint = new DTOPoint(handPoint.getX() - HAND_CLICK_OFFSET_X, handPoint.getY() + HAND_CLICK_OFFSET_Y);
                     }
                     tapPoint(adjustedPoint);
-                    handFound = true;
-                    break;
                 }
             }
+            
+            
         }
         
         logInfo("Finishing Skip Tutorial Task.");
