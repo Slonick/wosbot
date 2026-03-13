@@ -53,8 +53,7 @@ public class ResearchTask extends DelayedTask {
             String queueStatus = emuManager.ocrRegionText(
                     EMULATOR_NUMBER,
                     new DTOPoint(164, 811),
-                    new DTOPoint(303, 841),
-                    null).trim();
+                    new DTOPoint(303, 841)).trim();
 
             logInfo("Research queue OCR status: '" + queueStatus + "'");
 
@@ -77,10 +76,12 @@ public class ResearchTask extends DelayedTask {
                     if (minutesToWait > 30) {
                         long halfTime = minutesToWait / 2;
                         rescheduleTime = LocalDateTime.now().plusMinutes(halfTime);
-                        logInfo("Research busy for " + minutesToWait + " min. Rescheduling at half time: " + halfTime + " min from now.");
+                        logInfo("Research busy for " + minutesToWait + " min. Rescheduling at half time: " + halfTime
+                                + " min from now.");
                     } else {
                         rescheduleTime = LocalDateTime.now().plusMinutes(minutesToWait);
-                        logInfo("Research busy for " + minutesToWait + " min. Rescheduling at: " + minutesToWait + " min from now.");
+                        logInfo("Research busy for " + minutesToWait + " min. Rescheduling at: " + minutesToWait
+                                + " min from now.");
                     }
 
                     this.reschedule(rescheduleTime);
@@ -116,19 +117,23 @@ public class ResearchTask extends DelayedTask {
         DTORawImage screenshot = emuManager.captureScreenshotViaADB(EMULATOR_NUMBER);
 
         if (screenshot != null) {
-            DTOImageSearchResult result = emuManager.searchTemplate(EMULATOR_NUMBER, screenshot, EnumTemplates.SKIP_TUTORIAL_HAND, 80.0);
-            DTOImageSearchResult mirrorResult = emuManager.searchTemplate(EMULATOR_NUMBER, screenshot, EnumTemplates.SKIP_TUTORIAL_HAND_MIRROR, 80.0);
+            DTOImageSearchResult result = emuManager.searchTemplate(EMULATOR_NUMBER, screenshot,
+                    EnumTemplates.SKIP_TUTORIAL_HAND, 80.0);
+            DTOImageSearchResult mirrorResult = emuManager.searchTemplate(EMULATOR_NUMBER, screenshot,
+                    EnumTemplates.SKIP_TUTORIAL_HAND_MIRROR, 80.0);
 
             if ((result != null && result.isFound()) || (mirrorResult != null && mirrorResult.isFound())) {
                 logInfo("Hand template or mirror found! Clicking it with offset.");
                 DTOPoint adjustedPoint;
                 if (result != null && result.isFound()) {
                     DTOPoint handPoint = result.getPoint();
-                    adjustedPoint = new DTOPoint(handPoint.getX() + HAND_CLICK_OFFSET_X, handPoint.getY() + HAND_CLICK_OFFSET_Y);
+                    adjustedPoint = new DTOPoint(handPoint.getX() + HAND_CLICK_OFFSET_X,
+                            handPoint.getY() + HAND_CLICK_OFFSET_Y);
                 } else {
                     // For mirrored hand, mirror the X offset as well
                     DTOPoint handPoint = mirrorResult.getPoint();
-                    adjustedPoint = new DTOPoint(handPoint.getX() - HAND_CLICK_OFFSET_X, handPoint.getY() + HAND_CLICK_OFFSET_Y);
+                    adjustedPoint = new DTOPoint(handPoint.getX() - HAND_CLICK_OFFSET_X,
+                            handPoint.getY() + HAND_CLICK_OFFSET_Y);
                 }
                 tapPoint(adjustedPoint);
             }
@@ -136,7 +141,7 @@ public class ResearchTask extends DelayedTask {
 
         // Normalize menu by swiping top to bottom twice
         logDebug("Normalizing research menu with swipes...");
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 3; i++) {
             swipe(new DTOPoint(489, 320), new DTOPoint(489, 1156));
             sleepTask(500);
         }
@@ -174,17 +179,20 @@ public class ResearchTask extends DelayedTask {
                 DTOImageSearchResult highest = foundResults.stream()
                         .min(Comparator.comparingInt(r -> r.getPoint().getY()))
                         .get();
-                logInfo("Clicking research template at position: (" + highest.getPoint().getX() + ", " + highest.getPoint().getY() + ") with offset");
+                logInfo("Clicking research template at position: (" + highest.getPoint().getX() + ", "
+                        + highest.getPoint().getY() + ") with offset");
 
                 DTOPoint researchPoint = highest.getPoint();
-                DTOPoint adjustedResearchPoint = new DTOPoint(researchPoint.getX() + RESEARCH_CLICK_OFFSET_X, researchPoint.getY() + RESEARCH_CLICK_OFFSET_Y);
+                DTOPoint adjustedResearchPoint = new DTOPoint(researchPoint.getX() + RESEARCH_CLICK_OFFSET_X,
+                        researchPoint.getY() + RESEARCH_CLICK_OFFSET_Y);
 
                 tapPoint(adjustedResearchPoint);
                 break;
             }
 
             // None found - swipe up 500 pixels to scroll the menu
-            logDebug("No research templates found, scrolling up (attempt " + (scrollAttempt + 1) + "/" + MAX_SCROLL_ATTEMPTS + ")");
+            logDebug("No research templates found, scrolling up (attempt " + (scrollAttempt + 1) + "/"
+                    + MAX_SCROLL_ATTEMPTS + ")");
             swipe(new DTOPoint(489, 800), new DTOPoint(489, 300));
         }
 
@@ -226,7 +234,8 @@ public class ResearchTask extends DelayedTask {
                     if (minutesToWait > 30) {
                         long halfTime = minutesToWait / 2;
                         rescheduleTime = LocalDateTime.now().plusMinutes(halfTime);
-                        logInfo("Research time exceeds 30 minutes (" + minutesToWait + " min). Rescheduling for half time: " +
+                        logInfo("Research time exceeds 30 minutes (" + minutesToWait
+                                + " min). Rescheduling for half time: " +
                                 halfTime + " minutes from now");
                     } else if (minutesToWait < 5) {
                         rescheduleTime = LocalDateTime.now().plusMinutes(minutesToWait);
