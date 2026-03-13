@@ -158,6 +158,10 @@ public class DelayedTaskRegistry {
                 // Skip Tutorial
                 registry.put(TpDailyTaskEnum.SKIP_TUTORIAL,
                                 profile -> new SkipTutorialTask(profile, TpDailyTaskEnum.SKIP_TUTORIAL));
+
+                // Create Character
+                registry.put(TpDailyTaskEnum.CREATE_CHARACTER,
+                                profile -> new CreateCharacterTask(profile, TpDailyTaskEnum.CREATE_CHARACTER));
         }
 
         /**

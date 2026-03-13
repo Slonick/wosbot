@@ -290,6 +290,8 @@ public enum EnumConfigurationKey {
     DUMMY_TASK_PRIORITY_INT("100", Integer.class),
     SKIP_TUTORIAL_ENABLED_BOOL("false", Boolean.class),
     FISHING_MINIGAME_ENABLED_BOOL("false", Boolean.class),
+    CREATE_CHARACTER_ENABLED_BOOL("false", Boolean.class),
+    CREATE_CHARACTER_MAX_AGE_MINUTES_INT("17", Integer.class),
     TEST_HOOK_LOOP_ENABLED_BOOL("false", Boolean.class),
     KEEP_EMULATOR_OPEN_BOOL("false", Boolean.class);
 

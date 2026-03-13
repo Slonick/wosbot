@@ -11,7 +11,9 @@ import cl.camodev.wosbot.ot.DTORawImage;
 import cl.camodev.wosbot.serv.task.DelayedTask;
 import cl.camodev.wosbot.serv.task.EnumStartLocation;
 import cl.camodev.wosbot.serv.task.constants.SearchConfigConstants;
+import net.sourceforge.tess4j.TesseractException;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -47,44 +49,50 @@ public class ResearchTask extends DelayedTask {
 
         // Check research queue status via OCR before proceeding
         logDebug("Checking research queue status via OCR...");
-        String queueStatus = emuManager.ocrRegionText(
-                EMULATOR_NUMBER,
-                new DTOPoint(164, 811),
-                new DTOPoint(303, 841),
-                null).trim();
-
-        logInfo("Research queue OCR status: '" + queueStatus + "'");
-
-        if (!queueStatus.toLowerCase().contains("idle")) {
-            // Research is busy - try to read the time and reschedule smartly
-            logInfo("Research queue is busy. Attempting to read remaining time...");
-            Duration busyTime = durationHelper.execute(
+        try {
+            String queueStatus = emuManager.ocrRegionText(
+                    EMULATOR_NUMBER,
                     new DTOPoint(164, 811),
                     new DTOPoint(303, 841),
-                    5,
-                    300,
-                    null,
-                    TimeValidators::isValidTime,
-                    TimeConverters::toDuration);
+                    null).trim();
 
-            if (busyTime != null) {
-                long minutesToWait = busyTime.toMinutes();
-                LocalDateTime rescheduleTime;
+            logInfo("Research queue OCR status: '" + queueStatus + "'");
 
-                if (minutesToWait > 30) {
-                    long halfTime = minutesToWait / 2;
-                    rescheduleTime = LocalDateTime.now().plusMinutes(halfTime);
-                    logInfo("Research busy for " + minutesToWait + " min. Rescheduling at half time: " + halfTime + " min from now.");
+            if (!queueStatus.toLowerCase().contains("idle")) {
+                // Research is busy - try to read the time and reschedule smartly
+                logInfo("Research queue is busy. Attempting to read remaining time...");
+                Duration busyTime = durationHelper.execute(
+                        new DTOPoint(164, 811),
+                        new DTOPoint(303, 841),
+                        5,
+                        300,
+                        null,
+                        TimeValidators::isValidTime,
+                        TimeConverters::toDuration);
+
+                if (busyTime != null) {
+                    long minutesToWait = busyTime.toMinutes();
+                    LocalDateTime rescheduleTime;
+
+                    if (minutesToWait > 30) {
+                        long halfTime = minutesToWait / 2;
+                        rescheduleTime = LocalDateTime.now().plusMinutes(halfTime);
+                        logInfo("Research busy for " + minutesToWait + " min. Rescheduling at half time: " + halfTime + " min from now.");
+                    } else {
+                        rescheduleTime = LocalDateTime.now().plusMinutes(minutesToWait);
+                        logInfo("Research busy for " + minutesToWait + " min. Rescheduling at: " + minutesToWait + " min from now.");
+                    }
+
+                    this.reschedule(rescheduleTime);
                 } else {
-                    rescheduleTime = LocalDateTime.now().plusMinutes(minutesToWait);
-                    logInfo("Research busy for " + minutesToWait + " min. Rescheduling at: " + minutesToWait + " min from now.");
+                    logWarning("Could not read research queue time. Rescheduling in 1 hour.");
+                    this.reschedule(LocalDateTime.now().plusHours(1));
                 }
-
-                this.reschedule(rescheduleTime);
-            } else {
-                logWarning("Could not read research queue time. Rescheduling in 1 hour.");
-                this.reschedule(LocalDateTime.now().plusHours(1));
+                return;
             }
+        } catch (IOException | TesseractException | RuntimeException e) {
+            logError("Error during research status OCR: " + e.getMessage());
+            this.reschedule(LocalDateTime.now().plusHours(1));
             return;
         }
 

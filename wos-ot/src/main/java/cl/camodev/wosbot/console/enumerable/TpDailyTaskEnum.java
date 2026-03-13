@@ -71,7 +71,8 @@ public enum TpDailyTaskEnum {
     FISHING_MINIGAME(207, "Fishing Minigame", EnumConfigurationKey.FISHING_MINIGAME_ENABLED_BOOL),
     TEST_HOOK_LOOP(208, "Test Hook Loop", EnumConfigurationKey.TEST_HOOK_LOOP_ENABLED_BOOL),
     DUMMY_TASK(99, "Dummy Task", EnumConfigurationKey.DUMMY_TASK_ENABLED_BOOL),
-    SKIP_TUTORIAL(98, "Skip Tutorial", EnumConfigurationKey.SKIP_TUTORIAL_ENABLED_BOOL);
+    SKIP_TUTORIAL(98, "Skip Tutorial", EnumConfigurationKey.SKIP_TUTORIAL_ENABLED_BOOL),
+    CREATE_CHARACTER(110, "Create Character", EnumConfigurationKey.CREATE_CHARACTER_ENABLED_BOOL);
 
 
     private final int id;
