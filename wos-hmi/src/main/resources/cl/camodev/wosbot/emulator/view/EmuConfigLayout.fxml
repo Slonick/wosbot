@@ -65,7 +65,8 @@
       <children>
          <CheckBox fx:id="checkboxAutoStart" text="Auto start all Profiles after" />
          <TextField fx:id="textfieldAutoStartMinutes" maxWidth="50.0" minWidth="50.0" prefWidth="50.0" />
-         <Label text="minutes" />
+         <Label text="minutes. Mode: " />
+         <ComboBox fx:id="comboboxAutoStartMode" prefWidth="120.0" />
       </children>
    </HBox>
    <HBox alignment="CENTER_RIGHT" layoutX="20.0" layoutY="308.0" GridPane.rowIndex="1">

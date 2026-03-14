@@ -21,6 +21,13 @@
                                 <VBox spacing="8" style="-fx-padding: 12;">
                                     <children>
                                         <Label style="-fx-font-size: 10px; -fx-text-fill: #b5b5b5;" text="Automates research technology in your city" wrapText="true" />
+                                        <HBox spacing="10">
+                                            <children>
+                                                <CheckBox fx:id="checkBoxGrowth" mnemonicParsing="false" style="-fx-text-fill: #b5b5b5;" text="Growth" />
+                                                <CheckBox fx:id="checkBoxEconomy" mnemonicParsing="false" style="-fx-text-fill: #b5b5b5;" text="Economy" />
+                                                <CheckBox fx:id="checkBoxBattle" mnemonicParsing="false" style="-fx-text-fill: #b5b5b5;" text="Battle" />
+                                            </children>
+                                        </HBox>
                                     </children>
                                 </VBox>
                             </children>

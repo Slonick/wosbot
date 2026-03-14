@@ -30,6 +30,7 @@ public enum EnumConfigurationKey {
 	TELEGRAM_ALLOWED_CHAT_ID_STRING("", String.class),
 	AUTO_START_ENABLED_BOOL("false", Boolean.class),
 	AUTO_START_DELAY_MINUTES_INT("5", Integer.class),
+	AUTO_START_MODE_STRING("Continuous", String.class),
 
     // ========================================================================
     // CITY AND BUILDING MANAGEMENT
@@ -39,6 +40,9 @@ public enum EnumConfigurationKey {
 	CITY_ACCEPT_NEW_SURVIVORS_BOOL("false", Boolean.class),
 	CITY_ACCEPT_NEW_SURVIVORS_OFFSET_INT("60", Integer.class),
 	RESEARCH_ENABLED_BOOL("false", Boolean.class),
+	RESEARCH_GROWTH_BOOL("false", Boolean.class),
+	RESEARCH_ECONOMY_BOOL("false", Boolean.class),
+	RESEARCH_BATTLE_BOOL("false", Boolean.class),
 	
     // ========================================================================
     // RESOURCE GATHERING AND MANAGEMENT

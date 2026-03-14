@@ -60,6 +60,9 @@ public class EmuConfigLayoutController {
 	private CheckBox checkboxAutoStart;
 
 	@FXML
+	private ComboBox<String> comboboxAutoStartMode;
+
+	@FXML
 	private TextField textfieldAutoStartMinutes;
 
 	private final FileChooser fileChooser = new FileChooser();
@@ -213,6 +216,14 @@ public class EmuConfigLayoutController {
 				globalConfig.getOrDefault(EnumConfigurationKey.AUTO_START_DELAY_MINUTES_INT.name(), "5"));
 		textfieldAutoStartMinutes.disableProperty().bind(checkboxAutoStart.selectedProperty().not());
 
+        // Initialize auto-start mode
+		comboboxAutoStartMode.setItems(FXCollections.observableArrayList("Continuous", "Startup Only"));
+		String autoStartMode = globalConfig.getOrDefault(EnumConfigurationKey.AUTO_START_MODE_STRING.name(), "Continuous");
+		if (!comboboxAutoStartMode.getItems().contains(autoStartMode)) {
+			autoStartMode = "Continuous";
+		}
+		comboboxAutoStartMode.setValue(autoStartMode);
+
 		// Save auto-start settings instantly on change and re-evaluate timer
 		checkboxAutoStart.selectedProperty().addListener((obs, oldVal, newVal) -> {
 			ServScheduler.getServices().saveEmulatorPath(EnumConfigurationKey.AUTO_START_ENABLED_BOOL.name(),
@@ -231,6 +242,18 @@ public class EmuConfigLayoutController {
 				}
 				ServScheduler.getServices().saveEmulatorPath(
 						EnumConfigurationKey.AUTO_START_DELAY_MINUTES_INT.name(), minutes);
+				LauncherLayoutController launcher = LauncherLayoutController.getInstance();
+				if (launcher != null) {
+					javafx.application.Platform.runLater(launcher::scheduleAutoStart);
+				}
+			}
+		});
+
+		comboboxAutoStartMode.setOnAction(event -> {
+			String selectedMode = comboboxAutoStartMode.getValue();
+			if (selectedMode != null) {
+				ServScheduler.getServices().saveEmulatorPath(
+						EnumConfigurationKey.AUTO_START_MODE_STRING.name(), selectedMode);
 				LauncherLayoutController launcher = LauncherLayoutController.getInstance();
 				if (launcher != null) {
 					javafx.application.Platform.runLater(launcher::scheduleAutoStart);

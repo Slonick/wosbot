@@ -136,8 +136,39 @@ public class ResearchTask extends DelayedTask {
                             handPoint.getY() + HAND_CLICK_OFFSET_Y);
                 }
                 tapPoint(adjustedPoint);
-                sleepTask(1000);
+                sleepTask(300);
             }
+        }
+        sleepTask(300);
+        
+        // Apply category clicks based on options selected
+        boolean growthSelected = profile.getConfig(cl.camodev.wosbot.console.enumerable.EnumConfigurationKey.RESEARCH_GROWTH_BOOL, Boolean.class);
+        boolean economySelected = profile.getConfig(cl.camodev.wosbot.console.enumerable.EnumConfigurationKey.RESEARCH_ECONOMY_BOOL, Boolean.class);
+        boolean battleSelected = profile.getConfig(cl.camodev.wosbot.console.enumerable.EnumConfigurationKey.RESEARCH_BATTLE_BOOL, Boolean.class);
+
+        java.util.List<java.lang.Runnable> clickActions = new java.util.ArrayList<>();
+
+        if (growthSelected) {
+            clickActions.add(() -> tapPoint(new DTOPoint(java.util.concurrent.ThreadLocalRandom.current().nextInt(58, 211), java.util.concurrent.ThreadLocalRandom.current().nextInt(88, 137))));
+        }
+        if (economySelected) {
+            clickActions.add(() -> tapPoint(new DTOPoint(java.util.concurrent.ThreadLocalRandom.current().nextInt(274, 445), java.util.concurrent.ThreadLocalRandom.current().nextInt(84, 142))));
+        }
+        if (battleSelected) {
+            clickActions.add(() -> tapPoint(new DTOPoint(java.util.concurrent.ThreadLocalRandom.current().nextInt(499, 671), java.util.concurrent.ThreadLocalRandom.current().nextInt(99, 139))));
+        }
+
+        // If none are selected, add all to randomly select one
+        if (clickActions.isEmpty()) {
+            clickActions.add(() -> tapPoint(new DTOPoint(java.util.concurrent.ThreadLocalRandom.current().nextInt(58, 211), java.util.concurrent.ThreadLocalRandom.current().nextInt(88, 137))));
+            clickActions.add(() -> tapPoint(new DTOPoint(java.util.concurrent.ThreadLocalRandom.current().nextInt(274, 445), java.util.concurrent.ThreadLocalRandom.current().nextInt(84, 142))));
+            clickActions.add(() -> tapPoint(new DTOPoint(java.util.concurrent.ThreadLocalRandom.current().nextInt(499, 671), java.util.concurrent.ThreadLocalRandom.current().nextInt(99, 139))));
+        }
+
+        if (!clickActions.isEmpty()) {
+            int randomIndex = java.util.concurrent.ThreadLocalRandom.current().nextInt(clickActions.size());
+            clickActions.get(randomIndex).run();
+            sleepTask(500);
         }
 
         // Normalize menu by swiping top to bottom twice
@@ -188,6 +219,7 @@ public class ResearchTask extends DelayedTask {
                         researchPoint.getY() + RESEARCH_CLICK_OFFSET_Y);
 
                 tapPoint(adjustedResearchPoint);
+                sleepTask(300);
                 break;
             }
 
@@ -212,9 +244,27 @@ public class ResearchTask extends DelayedTask {
                 tapPoint(researchTextResult.getPoint());
                 sleepTask(500);
 
-                // Confirm by clicking (600, 1190)
-                tapPoint(new DTOPoint(600, 1190));
-                sleepTask(2000);
+                // OCR to check for "Speedup" before confirming
+                try {
+                    String confirmText = emuManager.ocrRegionText(
+                            EMULATOR_NUMBER,
+                            new DTOPoint(545, 1171),
+                            new DTOPoint(660, 1216)).trim();
+                    logInfo("Research confirm button OCR text: '" + confirmText + "'");
+
+                    if (!confirmText.toLowerCase().contains("speedup")) {
+                        // Confirm by clicking (600, 1190)
+                        tapPoint(new DTOPoint(600, 1190));
+                        sleepTask(1000);
+                    } else {
+                        logInfo("Button says 'Speedup'. Skipping click to safely read remaining time.");
+                    }
+                } catch (Exception e) {
+                    logWarning("Error OCRing confirm button: " + e.getMessage());
+                    // Fallback to clicking if OCR fails
+                    tapPoint(new DTOPoint(600, 1190));
+                    sleepTask(1000);
+                }
 
                 // OCR the research time after confirming
                 logInfo("Reading research time via OCR...");

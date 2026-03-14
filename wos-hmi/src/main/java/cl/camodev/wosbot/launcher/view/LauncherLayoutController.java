@@ -110,6 +110,7 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
     private final Map<Long, DTOQueueProfileState> activeQueueStates = new HashMap<>();
     private Timeline autoStartTimeline;
     private int autoStartSecondsRemaining;
+    private boolean isStartup = true; // Tracks if this is the initial application startup
 
     public LauncherLayoutController(Stage stage) {
         this.stage = stage;
@@ -531,6 +532,10 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
                 buttonPauseResume.setDisable(true);
                 resetPauseStates();
                 estado = false;
+                
+                // If it formally stopped, any future auto-starts are not the initial "startup"
+                isStartup = false;
+                
                 scheduleAutoStart();
             }
         }
@@ -580,6 +585,10 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
                     buttonStartStop.setDisable(true);
                     buttonPauseResume.setDisable(true);
                 });
+                
+                // If user clicks Stop manually, we are no longer in the startup phase
+                isStartup = false;
+                
                 actionController.stopBot();
             }
         });
@@ -782,6 +791,13 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
         if (!autoStartEnabled) {
             return;
         }
+        
+        String autoStartMode = globalConfig.getOrDefault(EnumConfigurationKey.AUTO_START_MODE_STRING.name(), "Continuous");
+        if ("Startup Only".equalsIgnoreCase(autoStartMode) && !isStartup) {
+            // In "Startup Only" mode, we only auto-start if it's the very first run.
+            return;
+        }
+
         int delayMinutes;
         try {
             delayMinutes = Integer.parseInt(
