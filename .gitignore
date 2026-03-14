@@ -3,37 +3,42 @@
 /wos-ot/bin
 /wos-serv/bin
 /wos-utiles/bin
-wos-hmi/database.db
 /wos-serv/.settings
 /wos-utiles/.settings
 /wos-hmi/.settings
 /wos-persitence/.settings
-wos-hmi/.classpath
-wos-ot/.classpath
-wos-ot/.project
-wos-persitence/.classpath
-wos-persitence/.project
-wos-serv/.classpath
-wos-serv/.project
-wos-utiles/.classpath
-wos-utiles/.project
-wos-hmi/.project
 /wos-ot/.settings
 .settings/org.eclipse.m2e.core.prefs
-.project
-/.idea
 /wos-hmi/log
-database.db*
 log/bot.log
 .vscode/settings.json
-/log
 /temp
-target/
-*/target/
 
 # Ignore Maven build output
+target/
 **/target/
 
+# Binaries
+*.jar
+*.war
+*.ear
+*.class
+
+# Logs
+*.log
+/log/
+**/log/
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+.nb-gradle/
 
 # Node.js
 node_modules/
@@ -50,11 +55,11 @@ build/
 out/
 
 # Environment configs
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env*
+
+# Database
+*.db*
+!/wos-hmi/src/main/resources/**/database.db # Allow if it's a seed DB, but usually exclude
 
 # OS generated files
 .DS_Store

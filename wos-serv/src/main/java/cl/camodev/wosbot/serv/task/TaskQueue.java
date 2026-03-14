@@ -267,6 +267,8 @@ public class TaskQueue {
 
             if (taskToExecute != null) {
                 taskQueueStatus.getLoopState().setExecutedTask(executeTask(taskToExecute));
+                // Reset idle flag so handleIdleTime() can re-evaluate after the task changed the schedule
+                taskQueueStatus.setIdleTimeExceeded(false);
             } else if (!taskQueueStatus.isPaused()) {
                 // Check for pending injections during idle time
                 InjectionRule pendingInjection = GlobalMonitorService.getInstance()
@@ -602,7 +604,7 @@ public class TaskQueue {
      * Handles the paused state of the task queue
      */
     private void handlePausedState() {
-        if (taskQueueStatus.getDelayUntil().isBefore(LocalDateTime.now())) {
+        if (!taskQueueStatus.isUserPaused() && taskQueueStatus.getDelayUntil().isBefore(LocalDateTime.now())) {
             if (taskQueueStatus.needsReconnect()) {
                 resumeAfterReconnectionDelay();
             } else {
@@ -783,7 +785,7 @@ public class TaskQueue {
      * Pauses queue processing, keeping tasks in the queue.
      */
     public void pause() {
-        taskQueueStatus.pause();
+        taskQueueStatus.userPause();
         updateProfileStatus("PAUSE REQUESTED");
         logInfo("TaskQueue paused");
     }
@@ -793,6 +795,8 @@ public class TaskQueue {
      */
     public void resume() {
         taskQueueStatus.setPaused(false);
+        taskQueueStatus.setUserPaused(false);
+        taskQueueStatus.setDelayUntil(LocalDateTime.now());
         updateProfileStatus("RESUMING");
         logInfo("TaskQueue resumed");
     }
@@ -809,7 +813,6 @@ public class TaskQueue {
         }
 
         taskQueueStatus.setNeedsReconnect(true);
-        taskQueueStatus.setPaused(false);
 
         // Check if the task already exists in the queue
         DelayedTask existing = taskQueue.stream().filter(prototype::equals).findFirst().orElse(null);

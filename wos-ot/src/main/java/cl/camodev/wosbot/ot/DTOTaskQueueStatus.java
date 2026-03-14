@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 public class DTOTaskQueueStatus {
     private volatile boolean running;
     private volatile boolean paused;
+    private volatile boolean userPaused;
     private volatile boolean needsReconnect;
     private volatile boolean readyToReconnect;
     private volatile boolean idleTimeExceeded;
@@ -21,6 +22,7 @@ public class DTOTaskQueueStatus {
     public DTOTaskQueueStatus() {
         this.running = false;
         this.paused = false;
+        this.userPaused = false;
         this.needsReconnect = false;
         this.readyToReconnect = false;
         this.pausedAt = LocalDateTime.MIN;
@@ -95,9 +97,13 @@ public class DTOTaskQueueStatus {
     public void reset() {
         this.running = false;
         this.paused = false;
+        this.userPaused = false;
         this.needsReconnect = false;
+        this.readyToReconnect = false;
+        this.idleTimeExceeded = false;
         this.pausedAt = LocalDateTime.MIN;
         this.delayUntil = LocalDateTime.now();
+        this.cancelReconnectThread();
     }
 
     public boolean isPaused() {
@@ -112,6 +118,19 @@ public class DTOTaskQueueStatus {
         this.paused = paused;
         if (paused)
             this.pausedAt = LocalDateTime.now();
+    }
+
+    public boolean isUserPaused() {
+        return this.userPaused;
+    }
+
+    public void setUserPaused(boolean userPaused) {
+        this.userPaused = userPaused;
+    }
+
+    public void userPause() {
+        this.setPaused(true);
+        this.userPaused = true;
     }
 
     public boolean needsReconnect() {
