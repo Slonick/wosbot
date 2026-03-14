@@ -9,8 +9,9 @@ import cl.camodev.wosbot.ot.DTOImageSearchResult;
 import cl.camodev.wosbot.ot.DTOPoint;
 import cl.camodev.wosbot.ot.DTOProfiles;
 import cl.camodev.wosbot.serv.task.DelayedTask;
-import cl.camodev.wosbot.serv.task.constants.SearchConfigConstants;
 import cl.camodev.wosbot.serv.task.helper.TemplateSearchHelper;
+import cl.camodev.wosbot.serv.task.constants.SearchConfigConstants;
+import cl.camodev.wosbot.serv.impl.ServStatistics;
 
 public class MysteryShopTask extends DelayedTask {
 
@@ -208,6 +209,7 @@ public class MysteryShopTask extends DelayedTask {
 				sleepTask(300);
 
 				logInfo("A free reward has been claimed.");
+				ServStatistics.getServices().increment(profile, "Mystery Shop Free Claims", 1);
 				foundAnyReward = true;
 				foundRewardInThisIteration = true;
 
@@ -235,6 +237,7 @@ public class MysteryShopTask extends DelayedTask {
 			sleepTask(1000);
 
 			logInfo("Daily refresh used successfully");
+			ServStatistics.getServices().increment(profile, "Daily Refreshes Used", 1);
 			return true;
 		}
 
@@ -333,6 +336,7 @@ public class MysteryShopTask extends DelayedTask {
 				sleepTask(600);
 
 				logInfo("250 Hero Widget found and purchased on attempt " + purchaseAttempt + ".");
+				ServStatistics.getServices().increment(profile, "Mystery Shop Purchases", 1);
 				foundAnyWidget = true;
 				foundWidgetInThisIteration = true;
 
@@ -383,6 +387,7 @@ public class MysteryShopTask extends DelayedTask {
 				sleepTask(600);
 
 				logInfo(itemName + " has been purchased.");
+				ServStatistics.getServices().increment(profile, "Mystery Shop Purchases", 1);
 				foundAnyItem = true;
 				foundItemInThisIteration = true;
 

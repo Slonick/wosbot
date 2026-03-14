@@ -297,7 +297,12 @@ public enum EnumConfigurationKey {
     CREATE_CHARACTER_ENABLED_BOOL("false", Boolean.class),
     CREATE_CHARACTER_MAX_AGE_MINUTES_INT("17", Integer.class),
     TEST_HOOK_LOOP_ENABLED_BOOL("false", Boolean.class),
-    KEEP_EMULATOR_OPEN_BOOL("false", Boolean.class);
+    KEEP_EMULATOR_OPEN_BOOL("false", Boolean.class),
+
+    // ========================================================================
+    // STATISTICS FOR UI
+    // ========================================================================
+    STATISTICS_JSON_STRING("{}", String.class);
 
 	// @formatter:on
 	private final String defaultValue;

@@ -12,6 +12,7 @@ import cl.camodev.wosbot.ot.DTOProfiles;
 import cl.camodev.wosbot.serv.task.DelayedTask;
 import cl.camodev.wosbot.serv.task.EnumStartLocation;
 import cl.camodev.wosbot.serv.task.constants.SearchConfigConstants;
+import cl.camodev.wosbot.serv.impl.ServStatistics;
 
 /**
  * Task responsible for claiming daily mission rewards.
@@ -109,6 +110,7 @@ public class DailyMissionTask extends DelayedTask {
 		navigateToDailyMissions();
 		switchToDailyMissionsTab();
 		claimAllRewards();
+		ServStatistics.getServices().increment(profile, "Daily Missions Claimed", 1);
 		closeInterface();
 
 		configureRecurringBehavior();

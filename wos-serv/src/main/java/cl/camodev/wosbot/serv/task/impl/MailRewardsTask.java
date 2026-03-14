@@ -13,6 +13,7 @@ import cl.camodev.wosbot.ot.DTOProfiles;
 import cl.camodev.wosbot.serv.task.DelayedTask;
 import cl.camodev.wosbot.serv.task.EnumStartLocation;
 import cl.camodev.wosbot.serv.task.helper.TemplateSearchHelper.SearchConfig;
+import cl.camodev.wosbot.serv.impl.ServStatistics;
 
 /**
  * Mail Rewards task that automatically claims all rewards from the mail inbox.
@@ -297,6 +298,7 @@ public class MailRewardsTask extends DelayedTask {
                 CLAIM_BUTTON_TAP_COUNT,
                 CLAIM_BUTTON_TAP_DELAY);
         sleepTask(500); // Wait for claim animation
+        ServStatistics.getServices().increment(profile, "Mail Rewards Claimed", 1);
     }
 
     /**

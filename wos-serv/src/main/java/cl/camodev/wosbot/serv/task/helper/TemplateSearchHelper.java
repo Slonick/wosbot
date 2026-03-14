@@ -32,7 +32,9 @@ public class TemplateSearchHelper {
     private final String emulatorNumber;
     private final ProfileLogger logger;
     private final String profileName;
+    private final cl.camodev.wosbot.ot.DTOProfiles profile;
     private final ServLogs servLogs;
+    private int failedSearches = 0;
     private static final String HELPER_NAME = "TemplateSearchHelper";
 
     /**
@@ -55,7 +57,12 @@ public class TemplateSearchHelper {
         this.emulatorNumber = emulatorNumber;
         this.logger = new ProfileLogger(TemplateSearchHelper.class, profile);
         this.profileName = profile.getName();
+        this.profile = profile;
         this.servLogs = ServLogs.getServices();
+    }
+
+    public int getFailedSearches() {
+        return failedSearches;
     }
 
     /**
@@ -602,5 +609,9 @@ public class TemplateSearchHelper {
         String prefixedMessage = profileName + " - " + message;
         logger.debug(prefixedMessage);
         servLogs.appendLog(EnumTpMessageSeverity.DEBUG, HELPER_NAME, profileName, message);
+
+        if (message != null && message.contains("not found after")) {
+            this.failedSearches++;
+        }
     }
 }

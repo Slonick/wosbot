@@ -57,6 +57,7 @@ import cl.camodev.wosbot.skiptutorial.view.SkipTutorialLayoutController;
 import cl.camodev.wosbot.training.view.TrainingLayoutController;
 import cl.camodev.wosbot.research.view.ResearchLayoutController;
 import cl.camodev.wosbot.character.view.CharacterLayoutController;
+import cl.camodev.wosbot.statistics.view.StatisticsLayoutController;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -448,7 +449,8 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
 				new ModuleDefinition("EmuConfigLayout", "Config", EmuConfigLayoutController::new),
 				new ModuleDefinition("TelegramLayout", "Telegram", TelegramLayoutController::new),
 				new ModuleDefinition("SkipTutorialLayout", "Skip Tutorial", SkipTutorialLayoutController::new),
-				new ModuleDefinition("CharacterLayout", "Character", CharacterLayoutController::new)
+				new ModuleDefinition("CharacterLayout", "Character", CharacterLayoutController::new),
+				new ModuleDefinition("StatisticsLayout", "Statistics", StatisticsLayoutController::new)
 				);
 		//@formatter:on
 

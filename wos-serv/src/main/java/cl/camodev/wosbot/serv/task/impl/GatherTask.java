@@ -28,6 +28,7 @@ import cl.camodev.wosbot.ot.DTOTesseractSettings;
 import cl.camodev.wosbot.serv.task.DelayedTask;
 import cl.camodev.wosbot.serv.task.EnumStartLocation;
 import cl.camodev.wosbot.serv.task.helper.TemplateSearchHelper.SearchConfig;
+import cl.camodev.wosbot.serv.impl.ServStatistics;
 
 /**
  * Optimized GatherTask: Manages persistent resource rotation, fairness, and
@@ -211,6 +212,7 @@ public class GatherTask extends DelayedTask {
                     rotationPool.remove(type);
                     progress = true;
                     logInfo(String.format("Deployed %s. Removed from pool.", type));
+                    ServStatistics.getServices().increment(profile, "Gather Marches Deployed", 1);
                     activeMarches.add(type); // Add to avoid re-picking if we loop
                 } else {
                     // Remove failed type from pool to avoid retrying it endlessly

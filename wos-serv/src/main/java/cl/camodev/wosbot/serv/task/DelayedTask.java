@@ -93,6 +93,7 @@ public abstract class DelayedTask implements Runnable, Delayed {
     protected ServScheduler servScheduler = ServScheduler.getServices();
     protected ServLogs servLogs = ServLogs.getServices();
     private ProfileLogger logger;
+    protected int currentOcrFailures = 0;
 
     // ========================================================================
     // HELPER INSTANCES
@@ -200,29 +201,41 @@ public abstract class DelayedTask implements Runnable, Delayed {
     @Override
     public void run() {
         refreshProfileFromDatabase();
+        long startTimeMs = System.currentTimeMillis();
+        int initialOcrFailures = this.currentOcrFailures;
+        int initialTemplateFailures = this.templateSearchHelper.getFailedSearches();
 
-        // InitializeTask and SkipTutorialTask have special handling
-        if (this instanceof InitializeTask || this instanceof SkipTutorialTask) {
+        try {
+            // InitializeTask and SkipTutorialTask have special handling
+            if (this instanceof InitializeTask || this instanceof SkipTutorialTask) {
+                execute();
+                return;
+            }
+
+            validateGameIsRunning();
+            navigationHelper.ensureCorrectScreenLocation(getRequiredStartLocation());
+
+            if (consumesStamina()) {
+                validateAndUpdateStamina();
+            }
+
             execute();
-            return;
+
+            if (shouldUpdateConfig) {
+                ServProfiles.getServices().saveProfile(profile);
+                shouldUpdateConfig = false;
+            }
+
+            sleepTask(2000); // Brief delay before cleanup
+            navigationHelper.ensureCorrectScreenLocation(EnumStartLocation.ANY);
+        } finally {
+            long executionTimeMs = System.currentTimeMillis() - startTimeMs;
+            int ocrFailuresDelta = this.currentOcrFailures - initialOcrFailures;
+            int templateFailuresDelta = this.templateSearchHelper.getFailedSearches() - initialTemplateFailures;
+
+            cl.camodev.wosbot.serv.impl.ServStatistics.getServices().recordTaskExecution(profile, taskName,
+                    executionTimeMs, ocrFailuresDelta, templateFailuresDelta);
         }
-
-        validateGameIsRunning();
-        navigationHelper.ensureCorrectScreenLocation(getRequiredStartLocation());
-
-        if (consumesStamina()) {
-            validateAndUpdateStamina();
-        }
-
-        execute();
-
-        if (shouldUpdateConfig) {
-            ServProfiles.getServices().saveProfile(profile);
-            shouldUpdateConfig = false;
-        }
-
-        sleepTask(2000); // Brief delay before cleanup
-        navigationHelper.ensureCorrectScreenLocation(EnumStartLocation.ANY);
     }
 
     /**
@@ -438,18 +451,30 @@ public abstract class DelayedTask implements Runnable, Delayed {
         String prefixedMessage = profile.getName() + " - " + message;
         logger.warn(prefixedMessage);
         servLogs.appendLog(EnumTpMessageSeverity.WARNING, taskName, profile.getName(), message);
+
+        if (message != null && message.toLowerCase().contains("ocr")) {
+            this.currentOcrFailures++;
+        }
     }
 
     public void logError(String message) {
         String prefixedMessage = profile.getName() + " - " + message;
         logger.error(prefixedMessage);
         servLogs.appendLog(EnumTpMessageSeverity.ERROR, taskName, profile.getName(), message);
+
+        if (message != null && message.toLowerCase().contains("ocr")) {
+            this.currentOcrFailures++;
+        }
     }
 
     public void logError(String message, Throwable t) {
         String prefixedMessage = profile.getName() + " - " + message;
         logger.error(prefixedMessage, t);
         servLogs.appendLog(EnumTpMessageSeverity.ERROR, taskName, profile.getName(), message);
+
+        if (message != null && message.toLowerCase().contains("ocr")) {
+            this.currentOcrFailures++;
+        }
     }
 
     public void logDebug(String message) {

@@ -10,6 +10,7 @@ import cl.camodev.wosbot.console.enumerable.EnumTemplates;
 import cl.camodev.wosbot.console.enumerable.TpDailyTaskEnum;
 import cl.camodev.wosbot.serv.task.DelayedTask;
 import cl.camodev.wosbot.serv.task.helper.TemplateSearchHelper.SearchConfig;
+import cl.camodev.wosbot.serv.impl.ServStatistics;
 
 import java.awt.*;
 import java.util.List;
@@ -588,6 +589,7 @@ public class AllianceShopTask extends DelayedTask {
         switch (outcome) {
             case PURCHASED:
                 logDebug("Successfully purchased item");
+                ServStatistics.getServices().increment(profile, "Alliance Shop Purchases", 1);
                 break;
             case CANT_AFFORD:
                 logInfo("Cannot afford item " + shopItem.getDisplayName() +

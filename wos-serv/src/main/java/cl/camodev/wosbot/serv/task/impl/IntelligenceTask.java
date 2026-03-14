@@ -30,6 +30,7 @@ import cl.camodev.wosbot.serv.task.EnumStartLocation;
 import cl.camodev.wosbot.serv.task.TaskQueue;
 import cl.camodev.wosbot.serv.task.constants.SearchConfigConstants;
 import cl.camodev.wosbot.serv.task.helper.TemplateSearchHelper.SearchConfig;
+import cl.camodev.wosbot.serv.impl.ServStatistics;
 import net.sourceforge.tess4j.TesseractException;
 
 public class IntelligenceTask extends DelayedTask {
@@ -448,6 +449,7 @@ public class IntelligenceTask extends DelayedTask {
 		sleepTask(1000);
 		tapBackButton();
 		StaminaService.getServices().subtractStamina(profile.getId(), JOURNEY_STAMINA_COST);
+		ServStatistics.getServices().increment(profile, "Intel Journeys", 1);
 	}
 
 	private void processSurvivor(DTOImageSearchResult result) {
@@ -475,6 +477,7 @@ public class IntelligenceTask extends DelayedTask {
 		tapPoint(rescue.getPoint());
 		sleepTask(500);
 		StaminaService.getServices().subtractStamina(profile.getId(), SURVIVOR_STAMINA_COST);
+		ServStatistics.getServices().increment(profile, "Intel Survivor Camps", 1);
 	}
 
 	private void processBeast(DTOImageSearchResult beast) {
@@ -572,6 +575,7 @@ public class IntelligenceTask extends DelayedTask {
 
 		logInfo("Beast march deployed successfully.");
 		beastMarchSent = true;
+		ServStatistics.getServices().increment(profile, "Intel Beast", 1);
 
 		// Update stamina
 		staminaHelper.subtractStamina(spentStamina, false); // false = not rally, use 10 stamina default

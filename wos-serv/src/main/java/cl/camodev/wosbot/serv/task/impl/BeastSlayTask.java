@@ -11,6 +11,7 @@ import cl.camodev.wosbot.ot.DTOProfiles;
 import cl.camodev.wosbot.serv.task.DelayedTask;
 import cl.camodev.wosbot.serv.task.EnumStartLocation;
 import cl.camodev.wosbot.serv.task.helper.TemplateSearchHelper.SearchConfig;
+import cl.camodev.wosbot.serv.impl.ServStatistics;
 
 public class BeastSlayTask extends DelayedTask {
 
@@ -101,6 +102,7 @@ public class BeastSlayTask extends DelayedTask {
 				staminaHelper.subtractStamina(STAMINA_COST_PER_ATTACK, false);
 				currentStamina = staminaHelper.getCurrentStamina();
 				attacksDone++;
+				ServStatistics.getServices().increment(profile, "Beast Attacks Sent", 1);
 
 				// March returns in ~2x travel time
 				long returnSeconds = (travelSeconds > 0) ? travelSeconds * 2 : 120;

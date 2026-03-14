@@ -13,6 +13,7 @@ import cl.camodev.wosbot.ot.DTOImageSearchResult;
 import cl.camodev.wosbot.ot.DTOPoint;
 import cl.camodev.wosbot.ot.DTOProfiles;
 import cl.camodev.wosbot.ot.DTOTesseractSettings;
+import cl.camodev.wosbot.serv.impl.ServStatistics;
 import cl.camodev.wosbot.serv.task.DelayedTask;
 import cl.camodev.wosbot.serv.task.EnumStartLocation;
 import cl.camodev.wosbot.serv.task.helper.TemplateSearchHelper.SearchConfig;
@@ -493,6 +494,7 @@ public class ArenaTask extends DelayedTask {
         tapPoint(PURCHASE_CONFIRM_BUTTON);
         sleepTask(500); // Wait for purchase confirmation
 
+        ServStatistics.getServices().increment(profile, "Arena Gems Spent", expectedPrice);
         return remainingAttempts;
     }
 
@@ -674,11 +676,13 @@ public class ArenaTask extends DelayedTask {
 
                 boolean victory = checkBattleResult();
                 if (victory) {
+                    ServStatistics.getServices().increment(profile, "Arena Battles Won", 1);
                     firstRun = false; // After first victory, UI changes
                     // Victory refreshes the list, so we can continue scanning from the start
                     sleepTask(1000);
                     return true;
                 } else {
+                    ServStatistics.getServices().increment(profile, "Arena Battles Lost", 1);
                     // Lost the battle - update currentOpponentPosition to continue from next
                     // opponent
                     currentOpponentPosition = (opponentIndex + 1) % MAX_OPPONENTS;
@@ -812,10 +816,12 @@ public class ArenaTask extends DelayedTask {
                 sleepTask(1000);
 
                 if (won) {
+                    ServStatistics.getServices().increment(profile, "Arena Battles Won", 1);
                     logInfo("Battle won. Opponent list will refresh.");
                     // Don't increment position - let processChallenges reset it
                     return true;
                 } else {
+                    ServStatistics.getServices().increment(profile, "Arena Battles Lost", 1);
                     // Lost - move to next opponent for next attempt
                     logInfo(String.format("Battle lost against opponent %d", currentOpponentPosition + 1));
                     currentOpponentPosition = (currentOpponentPosition + 1) % MAX_OPPONENTS;
@@ -855,9 +861,11 @@ public class ArenaTask extends DelayedTask {
         sleepTask(1000);
 
         if (!won) {
+            ServStatistics.getServices().increment(profile, "Arena Battles Lost", 1);
             currentOpponentPosition = (currentOpponentPosition + 1) % MAX_OPPONENTS;
             logInfo(String.format("Battle lost. Next position: opponent %d", currentOpponentPosition + 1));
         } else {
+            ServStatistics.getServices().increment(profile, "Arena Battles Won", 1);
             logInfo("Battle won. Opponent list will refresh.");
         }
 
@@ -973,6 +981,7 @@ public class ArenaTask extends DelayedTask {
             logInfo("Using free refresh");
             tapPoint(freeRefreshResult.getPoint());
             sleepTask(1000); // Wait for list to refresh
+            ServStatistics.getServices().increment(profile, "Arena Refreshes", 1);
             return true;
         }
 
@@ -1013,6 +1022,7 @@ public class ArenaTask extends DelayedTask {
             sleepTask(300); // Wait for checkbox animation
             tapPoint(confirmResult.getPoint());
             sleepTask(1000); // Wait for list to refresh
+            ServStatistics.getServices().increment(profile, "Arena Refreshes", 1);
             return true;
         }
 
