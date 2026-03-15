@@ -289,10 +289,16 @@ public class ResearchTask extends DelayedTask {
                                 + " min). Rescheduling for half time: " +
                                 halfTime + " minutes from now");
                     } else if (minutesToWait < 5) {
+                        if (minutesToWait == 0) {
+                            minutesToWait = 1;
+                        }
                         rescheduleTime = LocalDateTime.now().plusMinutes(minutesToWait);
                         logInfo("Research time is less than 5 minutes. Keeping normal schedule: " +
                                 minutesToWait + " minutes from now");
                     } else {
+                        if (minutesToWait == 0) {
+                            minutesToWait = 1;
+                        }
                         rescheduleTime = LocalDateTime.now().plusMinutes(minutesToWait);
                         logInfo("Research time is " + minutesToWait + " minutes. Using normal schedule");
                     }
