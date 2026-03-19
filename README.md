@@ -254,7 +254,7 @@ mvn clean install package
 ```
 
 > [!TIP]
-> Once completed, the compiled `.jar` file will be in the `wos-hmi/target` directory (e.g., `wos-bot-1.7.0.jar`).
+> Once completed, the compiled `.jar` file will be in the `wos-hmi/target` directory (e.g., `wos-bot-1.7.1.jar`).
 
 <br/>
 
@@ -265,7 +265,7 @@ mvn clean install package
 cd wos-hmi/target
 
 # Run the compiled jar
-java -jar wos-bot-1.7.0.jar
+java -jar wos-bot-1.7.1.jar
 ```
 
 > [!IMPORTANT]

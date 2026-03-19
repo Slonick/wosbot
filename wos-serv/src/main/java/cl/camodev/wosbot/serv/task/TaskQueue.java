@@ -867,7 +867,7 @@ public class TaskQueue {
 			java.time.format.DateTimeFormatter dateFormatter = java.time.format.DateTimeFormatter.ofPattern("MM/dd/yyyy");
 			String dateStr = actualWakeTime.format(dateFormatter);
 
-			String botJarPath = "C:\\Users\\parad\\OneDrive\\Desktop\\wosbot-main\\wos-hmi\\target\\wos-bot-1.7.0.jar";
+			String botJarPath = "C:\\Users\\parad\\OneDrive\\Desktop\\wosbot-main\\wos-hmi\\target\\wos-bot-1.7.1.jar";
 
 			// Step 1: Enable wake timers in the active power plan
 			logInfo("Enabling wake timers in Windows power settings...");

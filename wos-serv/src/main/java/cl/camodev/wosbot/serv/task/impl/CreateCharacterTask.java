@@ -58,6 +58,7 @@ public class CreateCharacterTask extends DelayedTask {
 
     private static final Pattern HOURS_PATTERN = Pattern.compile("(\\d+)\\s*hour");
     private static final Pattern MINUTES_PATTERN = Pattern.compile("(\\d+)\\s*minute");
+    private static final Pattern SECONDS_PATTERN = Pattern.compile("(\\d+)\\s*second");
 
     public CreateCharacterTask(DTOProfiles profile, TpDailyTaskEnum tpTask) {
         super(profile, tpTask);
@@ -181,6 +182,11 @@ public class CreateCharacterTask extends DelayedTask {
         Matcher minutesMatcher = MINUTES_PATTERN.matcher(ageText);
         if (minutesMatcher.find()) {
             totalMinutes += Integer.parseInt(minutesMatcher.group(1));
+            foundAny = true;
+        }
+
+        Matcher secondsMatcher = SECONDS_PATTERN.matcher(ageText);
+        if (secondsMatcher.find()) {
             foundAny = true;
         }
 
