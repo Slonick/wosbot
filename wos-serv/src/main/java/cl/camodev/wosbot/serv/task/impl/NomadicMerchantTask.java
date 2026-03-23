@@ -7,6 +7,7 @@ import cl.camodev.wosbot.console.enumerable.TpDailyTaskEnum;
 import cl.camodev.wosbot.ot.DTOImageSearchResult;
 import cl.camodev.wosbot.ot.DTOPoint;
 import cl.camodev.wosbot.ot.DTOProfiles;
+import cl.camodev.wosbot.serv.impl.ServStatistics;
 import cl.camodev.wosbot.serv.task.DelayedTask;
 import cl.camodev.wosbot.serv.task.EnumStartLocation;
 import cl.camodev.wosbot.serv.task.constants.SearchConfigConstants;
@@ -15,6 +16,8 @@ import cl.camodev.wosbot.serv.task.helper.TemplateSearchHelper;
 import java.time.LocalDateTime;
 
 public class NomadicMerchantTask extends DelayedTask {
+
+    private static final long MAX_TASK_EXECUTION_MS = 2 * 60 * 1000L;
 
     private final EnumTemplates[] TEMPLATES = { EnumTemplates.NOMADIC_MERCHANT_COAL,
             EnumTemplates.NOMADIC_MERCHANT_MEAT, EnumTemplates.NOMADIC_MERCHANT_STONE,
@@ -46,13 +49,17 @@ public class NomadicMerchantTask extends DelayedTask {
 
         // STEP 2: Main loop to handle all nomadic merchant operations
         boolean continueOperations = true;
+        int freeResourcesClaimedCount = 0;
+        int vipPointsPurchasedCount = 0;
+        int dailyRefreshUsedCount = 0;
+        long executionDeadlineMs = System.currentTimeMillis() + MAX_TASK_EXECUTION_MS;
 
-        while (continueOperations) {
+        while (continueOperations && System.currentTimeMillis() < executionDeadlineMs) {
             // PHASE 1: Search for resource templates until none are found
             boolean foundResourceTemplate = true;
             logInfo("Searching for free resources to claim.");
 
-            while (foundResourceTemplate) {
+            while (foundResourceTemplate && System.currentTimeMillis() < executionDeadlineMs) {
                 foundResourceTemplate = false;
 
                 // Iterate through each resource template
@@ -70,10 +77,16 @@ public class NomadicMerchantTask extends DelayedTask {
                         logInfo("Found resource: " + template.name() + ". Purchasing it.");
                         tapPoint(result.getPoint());
                         sleepTask(500);
+                        freeResourcesClaimedCount++;
                         foundResourceTemplate = true;
                         break; // Restart resource search from beginning
                     }
                 }
+            }
+
+            if (System.currentTimeMillis() >= executionDeadlineMs) {
+                continueOperations = false;
+                break;
             }
 
             // PHASE 2: Check if VIP purchase is enabled and search for VIP templates
@@ -103,6 +116,7 @@ public class NomadicMerchantTask extends DelayedTask {
                     tapPoint(new DTOPoint(355, 788));
                     sleepTask(1000);
 
+                    vipPointsPurchasedCount++;
                     foundVipTemplate = true;
                 }
             }
@@ -123,6 +137,7 @@ public class NomadicMerchantTask extends DelayedTask {
                 logInfo("Daily refresh is available. Using it now.");
                 tapRandomPoint(dailyRefreshResult.getPoint(), dailyRefreshResult.getPoint());
                 sleepTask(2000); // Wait longer for refresh to complete
+                dailyRefreshUsedCount++;
                 // Continue the main loop to check for new items after refresh
             } else {
                 // PHASE 5: No refresh available, operations complete
@@ -130,6 +145,21 @@ public class NomadicMerchantTask extends DelayedTask {
                 continueOperations = false;
             }
         }
+
+        if (System.currentTimeMillis() <= executionDeadlineMs) {
+            ServStatistics.getServices().increment(profile, "Nomadic Merchant Free Resources Claimed", freeResourcesClaimedCount);
+            ServStatistics.getServices().increment(profile, "Nomadic Merchant VIP Points Purchased", vipPointsPurchasedCount);
+            ServStatistics.getServices().increment(profile, "Nomadic Merchant Daily Refresh Used", dailyRefreshUsedCount);
+
+            logInfo("Nomadic Merchant stats - free resources claimed: " + freeResourcesClaimedCount
+                    + ", VIP points purchased: " + vipPointsPurchasedCount
+                    + ", daily refresh used: " + dailyRefreshUsedCount);
+        }
+        else
+        {
+            logWarning("Nomadic Merchant task reached execution limit. Ending current cycle to avoid infinite loop.");
+        }
+
         // Final step: schedule task till game reset
         reschedule(UtilTime.getGameReset());
     }

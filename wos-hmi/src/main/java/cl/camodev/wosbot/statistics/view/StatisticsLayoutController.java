@@ -51,6 +51,10 @@ public class StatisticsLayoutController extends AbstractProfileController {
         COUNTER_CATEGORIES.put("Daily Refreshes Used", "Economy");
         COUNTER_CATEGORIES.put("Alliance Shop Purchases", "Economy");
         COUNTER_CATEGORIES.put("Gather Marches Deployed", "Economy");
+        COUNTER_CATEGORIES.put("Nomadic Merchant Free Resources Claimed", "Economy");
+        COUNTER_CATEGORIES.put("Nomadic Merchant VIP Points Purchased", "Economy");
+        COUNTER_CATEGORIES.put("Nomadic Merchant Daily Refresh Used", "Economy");
+
         // Training & Research
         COUNTER_CATEGORIES.put("Training Batches Started", "Training & Research");
         COUNTER_CATEGORIES.put("Research Started", "Training & Research");
