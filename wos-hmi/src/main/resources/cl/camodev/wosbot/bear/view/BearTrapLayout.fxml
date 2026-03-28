@@ -20,7 +20,7 @@
         <!-- Main content panel with ScrollPane -->
         <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" style="-fx-background-color: transparent; -fx-background: transparent;" GridPane.columnIndex="0" GridPane.rowIndex="0">
             <content>
-                <VBox spacing="14" style="-fx-background-color: #1f1f1f; -fx-background-radius: 8; -fx-padding: 18;">
+                <VBox spacing="14" style="-fx-background-color: #11141A; -fx-background-radius: 8; -fx-padding: 18;">
                     <children>
                         <CheckBox fx:id="checkBoxEnableBearTrap" mnemonicParsing="false" style="-fx-font-size: 15px; -fx-font-weight: bold;" text="Enable Bear Trap" />
 

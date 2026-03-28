@@ -11,27 +11,37 @@
     -fx-font-size: 13px;
 
     /* Base Colors */
-    -wos-bg-app: #1e1e1e; /* Requested #1E1E1E */
+    -wos-bg-app: #11141a;
+    /* Requested #1E1E1E */
     -wos-bg-sidebar: #0c0b17;
-    -wos-bg-card: #1a1d24;
-    -wos-bg-table-row: #12141a;
-    -wos-bg-table-alt: #1a1d24;
-    
+    -wos-bg-card: #181c24; /* Slightly lighter than app bg for elevation */
+    -wos-bg-table-row: #14171f;
+    -wos-bg-table-alt: #1a1e27;
+
     /* Accents */
-    -wos-yellow: #fcd176; /* Exact Match string FCD176 */
-    -wos-yellow-dark: #bfa529; /* Brown/Dark yellow for the Pause button */
-    -wos-red: #ff271e; /* Requested #FF271E */
-    -wos-blue: #155dfc; /* Requested #155DFC */
-    -wos-teal: #3dc3c3; /* Game Settings header */
-    -wos-purple: #9b2fb8; /* Window Settings header */
-    -wos-green: #59ba59; /* Account header */
+    -wos-yellow: #fcd176;
+    /* Exact Match string FCD176 */
+    -wos-yellow-dark: #bfa529;
+    /* Brown/Dark yellow for the Pause button */
+    -wos-red: #ff271e;
+    /* Requested #FF271E */
+    -wos-blue: #155dfc;
+    /* Requested #155DFC */
+    -wos-teal: #3dc3c3;
+    /* Game Settings header */
+    -wos-purple: #9b2fb8;
+    /* Window Settings header */
+    -wos-green: #59ba59;
+    /* Account header */
 
     /* Typography */
     -wos-text-primary: #e6edf3;
     -wos-text-secondary: #9eaab6;
     -wos-text-dark: #000000;
-    -wos-info-cyan: #3fcadb; /* Cyan text for INFO logs */
-    -wos-module-blue: #6d99ef; /* Pale blue for Profile/Task text */
+    -wos-info-cyan: #3fcadb;
+    /* Cyan text for INFO logs */
+    -wos-module-blue: #6d99ef;
+    /* Pale blue for Profile/Task text */
 
     /* Borders & Inputs */
     -wos-border-subtle: #262a36;
@@ -43,8 +53,13 @@
 /* ---------------------------------------------------------------------------
  * ELEVATION & BASICS
  * --------------------------------------------------------------------------- */
-.elevation-0 { -fx-effect: none; }
-.elevation-1 { -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 10, 0, 0, 3); }
+.elevation-0 {
+    -fx-effect: none;
+}
+
+.elevation-1 {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 10, 0, 0, 3);
+}
 
 /* ---------------------------------------------------------------------------
  * LOGO & SIDEBAR
@@ -81,6 +96,7 @@
     -fx-background-color: transparent;
     -fx-background: transparent;
 }
+
 .nav-sidebar .scroll-pane .viewport {
     -fx-background-color: transparent;
 }
@@ -135,7 +151,7 @@
 /* Active Nav State — Solid Yellow, Dark Text */
 .nav-button.active {
     -fx-background-color: -wos-yellow;
-    -fx-text-fill: -wos-text-dark;
+    -fx-text-fill: #000000; /* Force pure black text */
     -fx-border-color: -wos-yellow;
 }
 
@@ -144,11 +160,13 @@
     -fx-icon-color: #636a75;
     -fx-icon-size: 14;
 }
+
 .nav-button:hover .ikonli-font-icon {
     -fx-icon-color: #e6edf3;
 }
+
 .nav-button.active .ikonli-font-icon {
-    -fx-icon-color: -wos-text-dark;
+    -fx-icon-color: #000000; /* Force pure black icon */
 }
 
 /* ---------------------------------------------------------------------------
@@ -185,13 +203,22 @@
     -fx-max-height: 38;
     -fx-pref-height: 38;
 }
-.action-button-start:hover { -fx-background-color: #ffe37d; }
-.action-button-start:pressed { -fx-background-color: #e4be36; -fx-scale-x: 0.98; -fx-scale-y: 0.98; }
+
+.action-button-start:hover {
+    -fx-background-color: #ffe37d;
+}
+
+.action-button-start:pressed {
+    -fx-background-color: #e4be36;
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+}
 
 .action-button-pause {
     /* Muted brown/yellow as seen in screenshot */
-    -fx-background-color: -wos-yellow-dark; 
-    -fx-text-fill: -wos-yellow; /* It seems text is slight light yellow on dark */
+    -fx-background-color: -wos-yellow-dark;
+    -fx-text-fill: -wos-yellow;
+    /* It seems text is slight light yellow on dark */
     -fx-font-weight: bold;
     -fx-font-size: 14px;
     -fx-padding: 0 16 0 16;
@@ -199,12 +226,32 @@
     -fx-max-height: 38;
     -fx-pref-height: 38;
 }
-.action-button-pause:hover { -fx-background-color: #bfa529; -fx-text-fill: #11141a; }
-.action-button-pause:pressed { -fx-scale-x: 0.98; -fx-scale-y: 0.98; }
-.action-button-pause > .label { -fx-padding: 0 4 0 0; }
-.action-button-pause > .arrow-button { -fx-padding: 0 8 0 8; }
-.action-button-pause > .arrow-button .arrow { -fx-background-color: -wos-yellow; }
-.action-button-pause:hover > .arrow-button .arrow { -fx-background-color: #11141a; }
+
+.action-button-pause:hover {
+    -fx-background-color: #bfa529;
+    -fx-text-fill: #11141a;
+}
+
+.action-button-pause:pressed {
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+}
+
+.action-button-pause>.label {
+    -fx-padding: 0 4 0 0;
+}
+
+.action-button-pause>.arrow-button {
+    -fx-padding: 0 8 0 8;
+}
+
+.action-button-pause>.arrow-button .arrow {
+    -fx-background-color: -wos-yellow;
+}
+
+.action-button-pause:hover>.arrow-button .arrow {
+    -fx-background-color: #11141a;
+}
 
 .action-button-logs {
     -fx-background-color: -wos-blue;
@@ -212,7 +259,10 @@
     -fx-font-weight: bold;
     -fx-padding: 8 16;
 }
-.action-button-logs:hover { -fx-background-color: #3b74eb; }
+
+.action-button-logs:hover {
+    -fx-background-color: #3b74eb;
+}
 
 .action-button-clear {
     -fx-background-color: -wos-red;
@@ -220,7 +270,10 @@
     -fx-font-weight: bold;
     -fx-padding: 8 16;
 }
-.action-button-clear:hover { -fx-background-color: #fb5a5a; }
+
+.action-button-clear:hover {
+    -fx-background-color: #fb5a5a;
+}
 
 /* ---------------------------------------------------------------------------
  * COLORED SECTION HEADERS (TitledPanes / VBox GroupHeaders)
@@ -233,11 +286,28 @@
     -fx-font-size: 13px;
     -fx-text-fill: -wos-text-dark;
 }
-.header-yellow { -fx-background-color: -wos-yellow; }
-.header-cyan { -fx-background-color: -wos-teal; }
-.header-purple { -fx-background-color: -wos-purple; -fx-text-fill: white; }
-.header-green { -fx-background-color: -wos-green; }
-.header-red { -fx-background-color: -wos-red; -fx-text-fill: white; }
+
+.header-yellow {
+    -fx-background-color: -wos-yellow;
+}
+
+.header-cyan {
+    -fx-background-color: -wos-teal;
+}
+
+.header-purple {
+    -fx-background-color: -wos-purple;
+    -fx-text-fill: white;
+}
+
+.header-green {
+    -fx-background-color: -wos-green;
+}
+
+.header-red {
+    -fx-background-color: -wos-red;
+    -fx-text-fill: white;
+}
 
 /* The container holding the header + content underneath has the dark bg */
 .content-card {
@@ -246,8 +316,10 @@
     -fx-border-color: -wos-border-subtle;
     -fx-border-radius: 6;
     -fx-border-width: 1;
-    -fx-padding: 0; /* Padding will exist inside the inner containers */
+    -fx-padding: 0;
+    /* Padding will exist inside the inner containers */
 }
+
 /* Inner padding for card content, to let header bleed to edge */
 .content-card-inner {
     -fx-padding: 16;
@@ -269,13 +341,16 @@
     -fx-background-color: -wos-yellow;
     -fx-background-radius: 6 6 0 0;
 }
+
 .table-view .column-header-background .filler {
     -fx-background-color: -wos-yellow;
 }
+
 .table-view .column-header {
     -fx-background-color: transparent;
     -fx-padding: 10 8;
 }
+
 .table-view .column-header .label {
     -fx-text-fill: -wos-text-dark;
     -fx-font-weight: bold;
@@ -287,13 +362,16 @@
     -fx-background-color: -wos-bg-table-row;
     -fx-border-color: transparent;
 }
+
 .table-row-cell:odd {
     -fx-background-color: -wos-bg-table-alt;
 }
 
 .table-row-cell:hover {
-    -fx-background-color: rgba(255, 255, 255, 0.05); /* very subtle hover */
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    /* very subtle hover */
 }
+
 .table-row-cell:selected {
     -fx-background-color: rgba(255, 255, 255, 0.08);
 }
@@ -303,45 +381,61 @@
     -fx-padding: 8 10;
     -fx-font-size: 12.5px;
 }
+
 .table-row-cell:selected .table-cell {
     -fx-text-fill: white;
 }
 
 /* Specific cell text coloring based on classes */
-.log-level-info { -fx-text-fill: -wos-info-cyan; }
-.log-module-text { -fx-text-fill: -wos-module-blue; }
-.icon-active-yellow { -fx-icon-color: -wos-yellow; }
+.log-level-info {
+    -fx-text-fill: -wos-info-cyan;
+}
+
+.log-module-text {
+    -fx-text-fill: -wos-module-blue;
+}
+
+.icon-active-yellow {
+    -fx-icon-color: -wos-yellow;
+}
 
 /* ---------------------------------------------------------------------------
  * TABS (Logs, Profiles, Tasks)
  * --------------------------------------------------------------------------- */
-.tab-pane > .tab-header-area {
+.tab-pane>.tab-header-area {
     -fx-padding: 0;
 }
-.tab-pane > .tab-header-area > .tab-header-background {
+
+.tab-pane>.tab-header-area>.tab-header-background {
     -fx-background-color: -wos-bg-app;
     -fx-border-color: transparent transparent -wos-border-subtle transparent;
     -fx-border-width: 0 0 1 0;
 }
+
 .tab-pane .tab {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
     -fx-padding: 10 24;
 }
+
 .tab-pane .tab:selected {
     -fx-background-color: transparent;
-    -fx-border-color: transparent transparent -wos-blue transparent; /* Blue underline in tabs */
+    -fx-border-color: transparent transparent -wos-blue transparent;
+    /* Blue underline in tabs */
     -fx-border-width: 0 0 3 0;
 }
+
 .tab-pane .tab .tab-label {
     -fx-text-fill: -wos-text-secondary;
     -fx-font-size: 12.5px;
 }
+
 .tab-pane .tab:selected .tab-label {
     -fx-text-fill: white;
     -fx-font-weight: bold;
 }
-.tab-pane > .tab-content-area {
+
+.tab-pane>.tab-content-area {
     -fx-background-color: -wos-bg-app;
     -fx-padding: 16 0 0 0;
 }
@@ -358,17 +452,20 @@
     -fx-padding: 8 12;
     -fx-prompt-text-fill: -wos-text-secondary;
 }
+
 .text-field:focused {
     -fx-border-color: -wos-yellow;
 }
 
 .search-field {
     -fx-background-color: #0c0e12;
-    -fx-border-color: #262a36;
-    -fx-background-radius: 12; /* Rounded search seen in screenshot */
+    -fx-border-color: #1e2430;
+    -fx-background-radius: 12;
+    /* Rounded search seen in screenshot */
     -fx-border-radius: 12;
     -fx-padding: 6 12 6 28;
 }
+
 .search-field:focused {
     -fx-border-color: -wos-yellow;
 }
@@ -380,22 +477,33 @@
     -fx-background-radius: 4;
     -fx-cursor: hand;
 }
+
 .combo-box .list-cell {
     -fx-text-fill: -wos-text-primary;
 }
-.combo-box:hover { -fx-border-color: #3b4255; }
-.combo-box:focused { -fx-border-color: -wos-yellow; }
+
+.combo-box:hover {
+    -fx-border-color: #3b4255;
+}
+
+.combo-box:focused {
+    -fx-border-color: -wos-yellow;
+}
+
 .combo-box-popup .list-view {
     -fx-background-color: -wos-bg-sidebar;
     -fx-border-color: -wos-border-subtle;
 }
+
 .combo-box-popup .list-cell {
     -fx-text-fill: -wos-text-primary;
     -fx-background-color: transparent;
 }
+
 .combo-box-popup .list-cell:hover {
     -fx-background-color: rgba(255, 255, 255, 0.05);
 }
+
 .combo-box-popup .list-cell:selected {
     -fx-background-color: rgba(255, 255, 255, 0.1);
     -fx-text-fill: white;
@@ -406,6 +514,7 @@
     -fx-text-fill: -wos-text-secondary;
     -fx-cursor: hand;
 }
+
 .check-box .box {
     -fx-background-color: transparent;
     -fx-border-color: #7b8393;
@@ -414,10 +523,12 @@
     -fx-background-radius: 4;
     -fx-padding: 3;
 }
+
 .check-box:selected .box {
     -fx-background-color: -wos-yellow;
     -fx-border-color: -wos-yellow;
 }
+
 .check-box:selected .mark {
     -fx-background-color: -wos-text-dark;
 }
@@ -425,25 +536,57 @@
 /* ---------------------------------------------------------------------------
  * SCROLLBARS (Thin, extremely dark)
  * --------------------------------------------------------------------------- */
-.scroll-bar { -fx-background-color: transparent; }
-.scroll-bar .track { -fx-background-color: transparent; }
+.scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .track {
+    -fx-background-color: transparent;
+}
+
 .scroll-bar .thumb {
-    -fx-background-color: #262a36;
+    -fx-background-color: #2e3444; /* Higher contrast thumb */
     -fx-background-radius: 8;
 }
-.scroll-bar .thumb:hover { -fx-background-color: #3b4255; }
-.scroll-bar .increment-button, .scroll-bar .decrement-button { -fx-background-color: transparent; -fx-padding: 0; }
-.scroll-bar .increment-arrow, .scroll-bar .decrement-arrow { -fx-shape: ""; -fx-padding: 0; }
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: #3b4255;
+}
+
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.scroll-bar .increment-arrow,
+.scroll-bar .decrement-arrow {
+    -fx-shape: "";
+    -fx-padding: 0;
+}
 
 /* ---------------------------------------------------------------------------
  * TYPOGRAPHY
  * --------------------------------------------------------------------------- */
-.label { -fx-text-fill: -wos-text-primary; }
-.label-muted { -fx-text-fill: -wos-text-secondary; -fx-font-size: 11px; }
+.label {
+    -fx-text-fill: -wos-text-primary;
+}
+
+.label-muted {
+    -fx-text-fill: -wos-text-secondary;
+    -fx-font-size: 11px;
+}
 
 /* Status Indicators */
-.status-running { -fx-text-fill: -wos-yellow; -fx-font-weight: bold; }
-.status-stopped { -fx-text-fill: -wos-red; -fx-font-weight: bold; }
+.status-running {
+    -fx-text-fill: -wos-yellow;
+    -fx-font-weight: bold;
+}
+
+.status-stopped {
+    -fx-text-fill: -wos-red;
+    -fx-font-weight: bold;
+}
 
 /* ---------------------------------------------------------------------------
  * CUSTOM CARDS AND HEADERS FOR TASK PAGES
@@ -475,16 +618,18 @@
     -fx-background-color: #0c0e14F0;
     -fx-background: #0c0e14F0;
 }
+
 .quick-nav-overlay .viewport {
     -fx-background-color: transparent;
 }
+
 .quick-nav-overlay .scroll-bar {
     -fx-background-color: transparent;
 }
 
 .quick-nav-card {
-    -fx-background-color: #181c24;
-    -fx-border-color: #262a36;
+    -fx-background-color: #1a1f2a;
+    -fx-border-color: #242936;
     -fx-border-width: 1;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
@@ -504,6 +649,7 @@
     -fx-icon-color: #636a75;
     -fx-icon-size: 28;
 }
+
 .quick-nav-card:hover .quick-nav-card-icon {
     -fx-icon-color: #fcd176;
 }
@@ -514,6 +660,7 @@
     -fx-font-weight: bold;
     -fx-alignment: CENTER;
 }
+
 .quick-nav-card:hover .quick-nav-card-label {
     -fx-text-fill: #ffffff;
 }
@@ -524,6 +671,7 @@
 .search-results-pane .viewport {
     -fx-background-color: #11141a;
 }
+
 .search-results-pane .scroll-bar {
     -fx-background-color: transparent;
 }
@@ -533,12 +681,29 @@
     -fx-border-width: 1;
     -fx-border-radius: 8;
     -fx-background-radius: 8;
-    -fx-background-color: #1e1f26; /* Dark background for body/rows */
+    -fx-background-color: #1e1f26;
+    /* Dark background for body/rows */
 }
 
 .search-group-header {
     -fx-background-color: #2e303d;
     -fx-background-radius: 8 8 0 0;
+}
+
+.search-go-button:hover {
+    -fx-background-color: #4875fa;
+}
+
+/* ---------------------------------------------------------------------------
+ * SOCIAL ICONS
+ * --------------------------------------------------------------------------- */
+.social-icon {
+    -fx-opacity: 0.8;
+}
+
+.social-icon:hover {
+    -fx-opacity: 1.0;
+    -fx-icon-color: #388bfd;
 }
 
 .search-group-header:hover {
@@ -559,5 +724,6 @@
 }
 
 .search-result-row:hover {
-    -fx-background-color: #262934; /* subtle hover */
+    -fx-background-color: #262934;
+    /* subtle hover */
 }

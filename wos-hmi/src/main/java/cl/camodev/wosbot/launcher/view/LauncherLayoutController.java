@@ -130,6 +130,12 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
     @FXML
     private VBox sidebarHeader;
 
+    @FXML
+    private FontIcon iconDiscord;
+
+    @FXML
+    private FontIcon iconGithub;
+
     private Stage stage;
     private boolean quickNavVisible = false;
     private ScrollPane quickNavOverlay;
@@ -175,6 +181,16 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
         scheduleAutoStart();
         initializeQuickNav();
         initializeSearch();
+        setupSocialIcons();
+    }
+
+    private void setupSocialIcons() {
+        if (iconDiscord != null) {
+            iconDiscord.setIconCode(MaterialDesignD.DISCORD);
+        }
+        if (iconGithub != null) {
+            iconGithub.setIconCode(MaterialDesignG.GITHUB);
+        }
     }
 
     private void initializeTelegramBot() {
@@ -1311,6 +1327,24 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
             return controller;
         }
 
+    }
+
+    @FXML
+    private void openDiscord() {
+        openWebPage("https://discord.com/invite/sUthSHRVvU");
+    }
+
+    @FXML
+    private void openGithub() {
+        openWebPage("https://github.com/Shederator/wosbot");
+    }
+
+    private void openWebPage(String uri) {
+        try {
+            java.awt.Desktop.getDesktop().browse(new java.net.URI(uri));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 }

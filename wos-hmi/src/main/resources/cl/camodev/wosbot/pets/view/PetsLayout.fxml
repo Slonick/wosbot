@@ -17,7 +17,7 @@
     <children>
         <ScrollPane fitToHeight="true" fitToWidth="true" hbarPolicy="NEVER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-background-color: transparent; -fx-background: transparent;" vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS">
             <content>
-                <VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" spacing="14" style="-fx-background-color: #1f1f1f; -fx-background-radius: 8; -fx-padding: 18;" VBox.vgrow="ALWAYS">
+                <VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" spacing="14" style="-fx-background-color: #11141A; -fx-background-radius: 8; -fx-padding: 18;" VBox.vgrow="ALWAYS">
                     <children>
                         <!-- Pets Section -->
                         <VBox maxHeight="1.7976931348623157E308" spacing="0" style="-fx-background-color: #242424; -fx-background-radius: 8;" VBox.vgrow="ALWAYS">
