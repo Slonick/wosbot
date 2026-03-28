@@ -33,7 +33,26 @@
 			<artifactId>controlsfx</artifactId>
 			<version>11.2.2</version>
 		</dependency>
-		
+
+		<!-- AtlantaFX Theme -->
+		<dependency>
+			<groupId>io.github.mkpaz</groupId>
+			<artifactId>atlantafx-base</artifactId>
+			<version>2.0.1</version>
+		</dependency>
+
+		<!-- Ikonli Icon System -->
+		<dependency>
+			<groupId>org.kordamp.ikonli</groupId>
+			<artifactId>ikonli-javafx</artifactId>
+			<version>12.3.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.kordamp.ikonli</groupId>
+			<artifactId>ikonli-materialdesign2-pack</artifactId>
+			<version>12.3.1</version>
+		</dependency>
+
 		<!-- Project Modules -->
 		<dependency>
 			<groupId>cl.camodev</groupId>
@@ -64,6 +83,18 @@
 			<artifactId>logback-classic</artifactId>
 			<version>1.5.13</version>
 			<scope>runtime</scope>
+		</dependency>
+
+		<!-- JNA for Native Windows Dark Title Bar (DWM) -->
+		<dependency>
+			<groupId>net.java.dev.jna</groupId>
+			<artifactId>jna</artifactId>
+			<version>5.13.0</version>
+		</dependency>
+		<dependency>
+			<groupId>net.java.dev.jna</groupId>
+			<artifactId>jna-platform</artifactId>
+			<version>5.13.0</version>
 		</dependency>
 	</dependencies>
 

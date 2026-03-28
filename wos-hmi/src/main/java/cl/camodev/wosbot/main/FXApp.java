@@ -10,6 +10,7 @@ import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import atlantafx.base.theme.PrimerDark;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +36,9 @@ public class FXApp extends Application {
 
 	@Override
 	public void start(Stage stage) throws IOException {
+		// Apply AtlantaFX dark theme globally
+		Application.setUserAgentStylesheet(new PrimerDark().getUserAgentStylesheet());
+
 		// Inicializar Preferences
 		Image appIcon = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/icons/appIcon.png")));
 		prefs = Preferences.userRoot().node(FXApp.class.getName());
@@ -59,6 +63,7 @@ public class FXApp extends Application {
         stage.setMinWidth(1050);
 		// Mostrar la ventana primero para que JavaFX calcule los tamaños correctamente
 		stage.show();
+        DarkTitleBar.enableDarkTitleBar(stage, "Launcher");
 
 		if (getParameters().getRaw().contains("--autostart")) {
 			javafx.application.Platform.runLater(() -> {

@@ -1,0 +1,27 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------------------< cl.camodev:wos-hmi >-------------------------
+[INFO] Building Wos Bot Features 1.7.1
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  0.707 s
+[INFO] Finished at: 2026-03-29T01:42:07+05:30
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal on project wos-hmi: Could not collect dependencies for project cl.camodev:wos-hmi:jar:1.7.1
+[ERROR] Failed to read artifact descriptor for cl.camodev:wos-ot:jar:1.7.1
+[ERROR] 	Caused by: The following artifacts could not be resolved: cl.camodev:wosbot:pom:${revision} (absent): cl.camodev:wosbot:pom:${revision} was not found in https://maven.google.com/ during a previous attempt. This failure was cached in the local repository and resolution is not reattempted until the update interval of google has elapsed or updates are forced
+[ERROR] Failed to read artifact descriptor for cl.camodev:wos-serv:jar:1.7.1
+[ERROR] 	Caused by: The following artifacts could not be resolved: cl.camodev:wosbot:pom:${revision} (absent): cl.camodev:wosbot:pom:${revision} was not found in https://maven.google.com/ during a previous attempt. This failure was cached in the local repository and resolution is not reattempted until the update interval of google has elapsed or updates are forced
+[ERROR] Failed to read artifact descriptor for cl.camodev:wos-utiles:jar:1.7.1
+[ERROR] 	Caused by: The following artifacts could not be resolved: cl.camodev:wosbot:pom:${revision} (absent): cl.camodev:wosbot:pom:${revision} was not found in https://maven.google.com/ during a previous attempt. This failure was cached in the local repository and resolution is not reattempted until the update interval of google has elapsed or updates are forced
+[ERROR] 
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/DependencyResolutionException

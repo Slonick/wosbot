@@ -93,28 +93,70 @@ public class ConsoleLogLayoutController implements IProfileDataChangeListener {
 		columnTask.setCellValueFactory(cellData -> cellData.getValue().taskProperty());
 		columnProfile.setCellValueFactory(cellData -> cellData.getValue().profileProperty());
 		
-		columnMessage.setCellFactory(column -> {
-			return new TableCell<>() {
-				private final Text text = new Text();
-
-				{
-					setGraphic(text);
-					text.wrappingWidthProperty().bind(widthProperty());
-					text.fillProperty().bind(textFillProperty()); // Inherit text color
-					setPrefHeight(USE_COMPUTED_SIZE);
+		columnMessage.setCellFactory(column -> new TableCell<>() {
+			private final Text text = new Text();
+			{
+				setGraphic(text);
+				text.wrappingWidthProperty().bind(widthProperty());
+				text.fillProperty().bind(textFillProperty()); // Inherit text color
+				setPrefHeight(USE_COMPUTED_SIZE);
+			}
+			@Override
+			protected void updateItem(String item, boolean empty) {
+				super.updateItem(item, empty);
+				if (empty || item == null) {
+					text.setText(null);
+				} else {
+					text.setText(item);
 				}
-
-				@Override
-				protected void updateItem(String item, boolean empty) {
-					super.updateItem(item, empty);
-					if (empty || item == null) {
-						text.setText(null);
-					} else {
-						text.setText(item);
-					}
-				}
-			};
+			}
 		});
+
+        columnLevel.setCellFactory(column -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                getStyleClass().removeAll("log-level-info", "status-stopped");
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item);
+                    if ("INFO".equalsIgnoreCase(item)) {
+                        getStyleClass().add("log-level-info");
+                    } else if ("ERROR".equalsIgnoreCase(item)) {
+                        getStyleClass().add("status-stopped");
+                    }
+                }
+            }
+        });
+
+        columnTask.setCellFactory(column -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                getStyleClass().remove("log-module-text");
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item);
+                    getStyleClass().add("log-module-text");
+                }
+            }
+        });
+
+        columnProfile.setCellFactory(column -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                getStyleClass().remove("log-module-text");
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item);
+                    getStyleClass().add("log-module-text");
+                }
+            }
+        });
 		
 		tableviewLogMessages.setItems(filteredLogMessages);
 

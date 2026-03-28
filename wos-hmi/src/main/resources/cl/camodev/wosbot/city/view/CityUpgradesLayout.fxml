@@ -1,41 +1,50 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.*?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
 
-<GridPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="306.0" prefWidth="580.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1">
-  <columnConstraints>
-      <ColumnConstraints hgrow="SOMETIMES" percentWidth="50.0" />
-      <ColumnConstraints hgrow="SOMETIMES" percentWidth="50.0" />
-  </columnConstraints>
-  <rowConstraints>
-    <RowConstraints maxHeight="1.7976931348623157E308" minHeight="10.0" percentHeight="25.0" prefHeight="277.0" vgrow="SOMETIMES" />
-      <RowConstraints maxHeight="1.7976931348623157E308" minHeight="10.0" percentHeight="25.0" prefHeight="277.0" vgrow="SOMETIMES" />
-      <RowConstraints maxHeight="1.7976931348623157E308" percentHeight="25.0" vgrow="SOMETIMES" />
-      <RowConstraints maxHeight="1.7976931348623157E308" minHeight="10.0" percentHeight="25.0" prefHeight="277.0" vgrow="SOMETIMES" />
-      <RowConstraints maxHeight="1.7976931348623157E308" minHeight="10.0" percentHeight="25.0" prefHeight="277.0" vgrow="SOMETIMES" />
-      <RowConstraints maxHeight="1.7976931348623157E308" minHeight="10.0" percentHeight="25.0" prefHeight="277.0" vgrow="SOMETIMES" />
-      <RowConstraints maxHeight="1.7976931348623157E308" minHeight="10.0" percentHeight="25.0" prefHeight="277.0" vgrow="SOMETIMES" />
-  </rowConstraints>
+<VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefWidth="600.0" spacing="16.0" style="-fx-padding: 16;" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1">
    <children>
-      <CheckBox fx:id="checkBoxUpgradeFurnace" graphicTextGap="3.0" mnemonicParsing="false" text="Upgrade Furnace">
-         <GridPane.margin>
-            <Insets />
-         </GridPane.margin>
-      </CheckBox>
-      <CheckBox fx:id="checkBoxPrioritiseFurnace" graphicTextGap="3.0" mnemonicParsing="false" text="Prioritise Furnace" GridPane.rowIndex="2">
-         <GridPane.margin>
-            <Insets />
-         </GridPane.margin>
-      </CheckBox>
-      <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" GridPane.columnIndex="1" />
-      <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="1">
+      <VBox styleClass="content-card">
          <children>
-            <Label text="Offset Time" />
-            <TextField fx:id="textFieldSirvivorsOffset" />
-         </children></HBox>
-      <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="2" />
-      <CheckBox fx:id="checkboxAcceptNewSurvivors" mnemonicParsing="false" text="Accept new survivors" GridPane.rowIndex="1" />
+            <HBox styleClass="header-yellow" alignment="CENTER_LEFT">
+               <children>
+                  <Label text="City Upgrades" style="-fx-text-fill: -wos-bg-app; -fx-font-weight: 700; -fx-font-size: 13px;" />
+               </children>
+            </HBox>
+            <VBox spacing="16.0" style="-fx-padding: 16;">
+               <children>
+                  <Label text="Configure automated building upgrades safely" style="-fx-text-fill: -wos-text-secondary;" />
+                  
+                  <GridPane vgap="16.0" hgap="16.0">
+                    <columnConstraints>
+                        <ColumnConstraints hgrow="SOMETIMES" minWidth="200.0" prefWidth="250.0" />
+                        <ColumnConstraints hgrow="SOMETIMES" minWidth="200.0" prefWidth="250.0" />
+                    </columnConstraints>
+                    
+                     <children>
+                        <CheckBox fx:id="checkBoxUpgradeFurnace" mnemonicParsing="false" text="Upgrade Furnace" />
+                        <CheckBox fx:id="checkBoxPrioritiseFurnace" mnemonicParsing="false" text="Prioritise Furnace" GridPane.rowIndex="2" />
+                        
+                        <CheckBox fx:id="checkboxAcceptNewSurvivors" mnemonicParsing="false" text="Accept new survivors" GridPane.rowIndex="1" />
+                        <HBox alignment="CENTER_LEFT" spacing="8.0" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                           <children>
+                              <Label text="Offset Time:" styleClass="label-muted" />
+                              <TextField fx:id="textFieldSirvivorsOffset" prefWidth="80.0" />
+                           </children>
+                        </HBox>
+                     </children>
+                  </GridPane>
+               </children>
+            </VBox>
+         </children>
+      </VBox>
    </children>
-</GridPane>
+</VBox>

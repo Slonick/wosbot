@@ -10,30 +10,27 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.geometry.Insets?>
 
-<VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="600.0" prefWidth="1200.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1">
+<VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308"
+      prefHeight="600.0" prefWidth="1200.0"
+      xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1">
    <children>
       <!-- Filter and Toggle Section -->
-      <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-background-color: #2E2E2E; -fx-padding: 10px;">
+      <HBox alignment="CENTER_LEFT" spacing="10" style="-fx-padding: 10;">
          <children>
-            <Label text="Filter by name:" style="-fx-text-fill: white; -fx-font-size: 14px;" />
-            <TextField fx:id="txtFilterTaskName" promptText="Enter task name..." prefWidth="250.0"
-                      style="-fx-background-color: #404040; -fx-text-fill: white; -fx-prompt-text-fill: #AAAAAA;" />
+            <Label text="Filter by name:" />
+            <TextField fx:id="txtFilterTaskName" promptText="Enter task name..." prefWidth="250.0" />
             <!-- Spacer to push toggle button to the right -->
             <Region HBox.hgrow="ALWAYS" />
             <!-- Toggle Button -->
-            <Button fx:id="btnToggleView" text="📊 Timeline View" onAction="#handleToggleView" 
-                   style="-fx-background-color: #404040; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 8px 16px; -fx-cursor: hand;" />
+            <Button fx:id="btnToggleView" text="Timeline View" onAction="#handleToggleView" />
          </children>
-         <VBox.margin>
-            <Insets />
-         </VBox.margin>
       </HBox>
 
       <!-- Container for both views -->
       <StackPane fx:id="viewContainer" VBox.vgrow="ALWAYS">
          <children>
             <!-- Standard Table View -->
-            <TabPane fx:id="tabPaneProfiles" style="-fx-tab-min-width: 120px; -fx-tab-max-width: 200px;" styleClass="horizontal-tab-pane">
+            <TabPane fx:id="tabPaneProfiles" styleClass="horizontal-tab-pane">
                <!-- Profile tabs will be populated dynamically -->
             </TabPane>
             <!-- Gantt View (loaded dynamically) -->
