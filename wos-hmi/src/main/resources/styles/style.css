@@ -138,9 +138,19 @@
     -fx-graphic-text-gap: 12;
 }
 
+.nav-button .label {
+    -fx-text-fill: #b4b9c1;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
 .nav-button:hover {
     -fx-background-color: rgba(255, 255, 255, 0.05);
     -fx-border-color: rgba(255, 255, 255, 0.1);
+    -fx-text-fill: white;
+}
+
+.nav-button:hover .label {
     -fx-text-fill: white;
 }
 
@@ -153,6 +163,10 @@
     -fx-background-color: -wos-yellow;
     -fx-text-fill: #000000; /* Force pure black text */
     -fx-border-color: -wos-yellow;
+}
+
+.nav-button.active .label {
+    -fx-text-fill: #000000; /* Force pure black text for inner label */
 }
 
 /* Icon colors */
