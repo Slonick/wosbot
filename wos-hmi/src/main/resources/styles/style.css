@@ -543,6 +543,10 @@
     -fx-border-color: -wos-yellow;
 }
 
+.check-box .mark {
+    -fx-background-color: transparent;
+}
+
 .check-box:selected .mark {
     -fx-background-color: -wos-text-dark;
 }

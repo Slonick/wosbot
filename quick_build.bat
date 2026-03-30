@@ -16,7 +16,7 @@ if errorlevel 1 (
     pause
     exit /b %errorlevel%
 )
-call mvn package -DskipTests
+call mvn clean install package
 if errorlevel 1 (
     echo [ERROR] Build failed!
     pause

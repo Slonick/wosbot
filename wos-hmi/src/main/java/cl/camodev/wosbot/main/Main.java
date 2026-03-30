@@ -25,9 +25,23 @@ public class Main {
 				ProfileLogger.closeAllLogWriters();
 			}));
 
-			// Launch JavaFX application
-			FXApp.main(args);
+			boolean headless = false;
+			for (String arg : args) {
+				if ("--headless".equalsIgnoreCase(arg)) {
+					headless = true;
+					break;
+				}
+			}
 
+			if (headless) {
+				logger.info("Starting in HEADLESS mode...");
+				HeadlessApp.start(args);
+				// Keep the thread alive
+				Thread.currentThread().join();
+			} else {
+				// Launch JavaFX application
+				FXApp.main(args);
+			}
 		} catch (Exception e) {
 			logger.error("Failed to start application: " + e.getMessage(), e);
 			ProfileLogger.closeAllLogWriters();

@@ -196,8 +196,10 @@ public class TelegramWatcher {
         String text = message.path("text").asText("").trim().toLowerCase();
 
         // ── Watcher-owned commands ────────────────────────────────────────────
-        if (text.startsWith("/launch")) {
-            handleLaunch(chatId);
+        if (text.startsWith("/launch_headless")) {
+            handleLaunch(chatId, true);
+        } else if (text.startsWith("/launch")) {
+            handleLaunch(chatId, false);
         } else if (text.startsWith("/kill")) {
             handleKill(chatId);
         } else if (text.startsWith("/wstatus")) {
@@ -212,7 +214,7 @@ public class TelegramWatcher {
 
     // ── action handlers ───────────────────────────────────────────────────────
 
-    private void handleLaunch(long chatId) {
+    private void handleLaunch(long chatId, boolean headless) {
         // Check if already running
         if (isBotProcessAlive()) {
             sendMessage(chatId, "ℹ️ Bot app is already running.");
@@ -228,7 +230,12 @@ public class TelegramWatcher {
             String javaExe = ProcessHandle.current().info().command()
                     .orElse("java"); // reuse same JVM if possible
 
-            ProcessBuilder pb = new ProcessBuilder(javaExe, "-jar", botJar.getName());
+            ProcessBuilder pb;
+            if (headless) {
+                pb = new ProcessBuilder(javaExe, "-jar", botJar.getName(), "--headless");
+            } else {
+                pb = new ProcessBuilder(javaExe, "-jar", botJar.getName());
+            }
             pb.directory(botJarDir);
             pb.redirectErrorStream(false);
             // Detach stdout/stderr so they don't block this process
@@ -300,14 +307,17 @@ public class TelegramWatcher {
         if (botProcess != null && botProcess.isAlive()) {
             return true;
         }
-        // Also scan all processes in case the app was started some other way
+        // Also scan all processes in case the app was started some other way (e.g., IDE or raw java command)
         return ProcessHandle.allProcesses()
-                .filter(ph -> ph.info().arguments().map(args -> {
-                    for (String a : args) {
-                        if (a.contains(botJar.getName())) return true;
-                    }
-                    return false;
-                }).orElse(false))
+                .filter(ph -> ph.info().command().map(c -> c.toLowerCase().contains("java")).orElse(false))
+                .filter(ph -> {
+                    String cmdLine = ph.info().commandLine().orElse("");
+                    // Check if the command line contains the JAR name or any of the main classes
+                    return cmdLine.contains(botJar.getName()) ||
+                           cmdLine.contains("cl.camodev.wosbot.main.Main") ||
+                           cmdLine.contains("cl.camodev.wosbot.main.FXApp") ||
+                           cmdLine.contains("cl.camodev.wosbot.main.HeadlessApp");
+                })
                 .findFirst()
                 .isPresent();
     }
@@ -319,9 +329,10 @@ public class TelegramWatcher {
           + "╚══════════════════════════╝\n"
           + "\n"
           + "🚀 *Process Control* _(watcher – always on)_\n"
-          + "`/launch`      — Start the bot app (open the JAR)\n"
-          + "`/kill`        — Force-close the bot app\n"
-          + "`/wstatus`     — Check if the bot app is running\n"
+          + "`/launch`          — Start the bot app (open the JAR)\n"
+          + "`/launch_headless` — Start the bot app in the background without UI\n"
+          + "`/kill`            — Force-close the bot app\n"
+          + "`/wstatus`         — Check if the bot app is running\n"
           + "\n"
           + "⚙️ *Automation Control* _(requires app to be running)_\n"
           + "`/startbot`    — Begin the automation routines\n"

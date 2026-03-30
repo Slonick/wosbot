@@ -204,6 +204,9 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
         if (enabled && !token.isBlank()) {
             long chatId = chatIdStr.isBlank() ? 0L : Long.parseLong(chatIdStr);
             TelegramBotService.getInstance().start(token, chatId);
+            
+            // Auto-start watcher
+            cl.camodev.wosbot.serv.impl.TelegramWatcherLauncher.startWatcherIfNotRunning();
         }
     }
 

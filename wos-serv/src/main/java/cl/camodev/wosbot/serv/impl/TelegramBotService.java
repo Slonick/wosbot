@@ -275,8 +275,15 @@ public class TelegramBotService implements IBotStateListener {
             Thread.ofVirtual().start(() -> handleProfilesCommand(chatId, -1L));
         } else if (text.startsWith("/reboot") || text.contains("reboot")) {
             Thread.ofVirtual().start(() -> handleRebootCommand(chatId));
-        } else if (text.startsWith("/help") || text.equals("/") || text.contains("help")) {
+        } else if (text.startsWith("/help") || text.equals("/") || text.contains("help") || text.startsWith("/whelp")) {
             sendMessage(chatId, buildHelpMessage());
+        } else if (text.startsWith("/launch_headless") || text.startsWith("/launch")) {
+            sendMessage(chatId, "ℹ️ Bot app is already running.");
+        } else if (text.startsWith("/kill")) {
+            sendMessage(chatId, "⏹️ Bot app has been terminated via Telegram.");
+            Thread.ofVirtual().start(() -> System.exit(0));
+        } else if (text.startsWith("/wstatus")) {
+            sendMessage(chatId, "✅ Bot app is *running*.");
         } else {
             sendMessage(chatId,
                     "❓ Unknown command. Send /help for the list of commands.");

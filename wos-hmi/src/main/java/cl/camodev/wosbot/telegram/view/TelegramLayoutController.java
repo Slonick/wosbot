@@ -158,6 +158,9 @@ public class TelegramLayoutController {
             svc.start(token, cid);
             labelStatus.setText("Status: ✅ Running");
             labelStatus.setStyle("-fx-text-fill: #4caf50;");
+            
+            // Auto-start watcher
+            cl.camodev.wosbot.serv.impl.TelegramWatcherLauncher.startWatcherIfNotRunning();
         } else {
             svc.stop();
             labelStatus.setText("Status: 🔴 Stopped");
