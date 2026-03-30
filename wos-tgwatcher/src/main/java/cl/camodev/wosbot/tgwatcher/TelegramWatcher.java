@@ -2,6 +2,7 @@ package cl.camodev.wosbot.tgwatcher;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,46 +10,55 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.Properties;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Always-on standalone Telegram watcher.
+ * Always-on standalone Telegram watcher — the ONLY Telegram long-poll process.
  *
- * This process runs permanently (started at Windows login via the Startup
- * folder or HKCU\Run) and is completely independent of the main bot JAR.
+ * This process runs permanently (Windows Startup / HKCU\Run) and is the sole
+ * consumer of the Telegram Bot API's getUpdates endpoint. The main bot app no
+ * longer polls Telegram; instead it exposes a local HTTP command server on
+ * 127.0.0.1:{localPort} that this watcher forwards app-level commands to.
  *
- * It polls the Telegram Bot API and reacts to launcher commands:
+ * Watcher-owned commands (handled here regardless of app state):
+ *   /launch          — start the main bot JAR
+ *   /launch_headless — start the main bot JAR without UI
+ *   /kill            — terminate the main bot JAR process
+ *   /wstatus         — report whether the bot process is alive
+ *   /whelp           — list all commands
  *
- *   /launch   — start the main bot JAR if it is not already running
- *   /kill     — terminate the main bot JAR process
- *   /wstatus  — report whether the main bot JAR process is alive
- *   /whelp    — list these commands
+ * Everything else is forwarded to http://127.0.0.1:{localPort}/command.
+ * Callback queries (inline keyboard taps) are also forwarded to the app.
  *
- * Commands /startbot, /stopbot, /status are intentionally IGNORED here —
- * they are handled by the TelegramBotService running inside the main app.
+ * Single-instance guarantee: a FileLock on %USERPROFILE%/.wosbot/watcher.lock
+ * prevents multiple watcher processes from running simultaneously.
  *
- * Configuration is read from: %USERPROFILE%\.wosbot\telegram-watcher.properties
- * (written automatically by the Telegram config panel in the main bot UI)
- *
+ * Configuration: %USERPROFILE%\.wosbot\telegram-watcher.properties
  *   token=<BotFather token>
  *   chatId=<your Telegram numeric chat-ID>
  *   botJarPath=<absolute path to wos-bot-x.x.x.jar>
+ *   localPort=8765
  */
 public class TelegramWatcher {
 
     private static final Logger logger = LoggerFactory.getLogger(TelegramWatcher.class);
-    private static final String API_BASE = "https://api.telegram.org/bot";
+    private static final String API_BASE         = "https://api.telegram.org/bot";
     private static final int    LONG_POLL_TIMEOUT = 30;
+    private static final int    DEFAULT_LOCAL_PORT = 8765;
 
-    /** Config file location: %USERPROFILE%/.wosbot/telegram-watcher.properties */
     public static Path configFilePath() {
         return Paths.get(System.getProperty("user.home"), ".wosbot", "telegram-watcher.properties");
     }
@@ -61,19 +71,40 @@ public class TelegramWatcher {
         System.out.println("  Config: " + configFilePath());
         System.out.println("==============================================");
 
-        Properties cfg = loadConfig();
-        String token  = cfg.getProperty("token",  "").trim();
-        String chatId = cfg.getProperty("chatId", "").trim();
-        String jarPath = cfg.getProperty("botJarPath", "").trim();
+        // ── Single-instance lock ───────────────────────────────────────────────
+        Path lockFilePath = configFilePath().resolveSibling("watcher.lock");
+        Files.createDirectories(lockFilePath.getParent());
+        FileChannel lockChannel = FileChannel.open(lockFilePath,
+                StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+        FileLock fileLock = lockChannel.tryLock();
+        if (fileLock == null) {
+            System.err.println("[ERROR] Another instance of the Telegram Watcher is already running.");
+            System.err.println("        If you are sure no other instance is running, delete: " + lockFilePath);
+            System.exit(0);
+        }
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try { fileLock.release(); lockChannel.close(); } catch (Exception ignored) {}
+        }));
+
+        // ── Load config ───────────────────────────────────────────────────────
+        Properties cfg  = loadConfig();
+        String token    = cfg.getProperty("token",      "").trim();
+        String chatId   = cfg.getProperty("chatId",     "").trim();
+        String jarPath  = cfg.getProperty("botJarPath", "").trim();
+        int    localPort;
+        try {
+            localPort = Integer.parseInt(
+                    cfg.getProperty("localPort", String.valueOf(DEFAULT_LOCAL_PORT)).trim());
+        } catch (NumberFormatException e) {
+            localPort = DEFAULT_LOCAL_PORT;
+        }
 
         if (token.isBlank()) {
             System.err.println("[ERROR] 'token' is not set in " + configFilePath());
-            System.err.println("        Open the bot, go to Telegram panel, enter token and save.");
             System.exit(1);
         }
         if (jarPath.isBlank()) {
             System.err.println("[ERROR] 'botJarPath' is not set in " + configFilePath());
-            System.err.println("        Open the bot, go to Telegram panel, enter the JAR path and save.");
             System.exit(1);
         }
 
@@ -82,35 +113,37 @@ public class TelegramWatcher {
             try {
                 allowedChatId = Long.parseLong(chatId);
             } catch (NumberFormatException e) {
-                System.err.println("[WARN] chatId '" + chatId + "' is not a valid number – all chats will be rejected");
+                System.err.println("[WARN] chatId '" + chatId + "' is not a valid number.");
             }
         }
 
-        new TelegramWatcher(token, allowedChatId, jarPath).run();
+        new TelegramWatcher(token, allowedChatId, jarPath, localPort).run();
     }
 
-    // ── instance ──────────────────────────────────────────────────────────────
+    // ── instance fields ───────────────────────────────────────────────────────
 
-    private final String       token;
-    private final long         allowedChatId;
-    private final File         botJar;
-    private final File         botJarDir;
-    private final HttpClient   httpClient;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final String        token;
+    private final long          allowedChatId;
+    private final File          botJar;
+    private final File          botJarDir;
+    private final int           localPort;
+    private final HttpClient    httpClient;
+    private final ObjectMapper  mapper = new ObjectMapper();
 
-    private long    lastUpdateId = -1;
-    private Process botProcess   = null;   // the process we launched (null if we didn't launch it)
+    private long              lastUpdateId  = -1;
+    private volatile Process  botProcess    = null;
+    private final ReentrantLock launchLock  = new ReentrantLock();
 
-    // Exponential back-off for network errors (e.g. DNS not ready after PC restart)
-    private static final long BACKOFF_INITIAL_MS  = 5_000;   //  5 s
-    private static final long BACKOFF_MAX_MS      = 60_000;  // 60 s
+    private static final long BACKOFF_INITIAL_MS = 5_000;
+    private static final long BACKOFF_MAX_MS     = 60_000;
     private long currentBackoffMs = BACKOFF_INITIAL_MS;
 
-    private TelegramWatcher(String token, long allowedChatId, String jarPath) {
+    private TelegramWatcher(String token, long allowedChatId, String jarPath, int localPort) {
         this.token         = token;
         this.allowedChatId = allowedChatId;
         this.botJar        = new File(jarPath);
         this.botJarDir     = botJar.getParentFile();
+        this.localPort     = localPort;
         this.httpClient    = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
@@ -119,55 +152,48 @@ public class TelegramWatcher {
     // ── polling loop ──────────────────────────────────────────────────────────
 
     private void run() {
-        logger.info("Watcher started. Polling Telegram for /launch, /kill, /wstatus commands.");
-        System.out.println("[INFO] Watcher running. Waiting for Telegram commands...");
-        System.out.println("[INFO] Send /whelp to your bot to list available launcher commands.");
+        logger.info("Watcher started. Sole Telegram poller. Forwarding app commands to port {}.", localPort);
+        System.out.println("[INFO] Watcher running. Send /whelp for the command list.");
 
         while (!Thread.currentThread().isInterrupted()) {
             try {
                 String url = API_BASE + token
                         + "/getUpdates?timeout=" + LONG_POLL_TIMEOUT
+                        + "&allowed_updates=%5B%22message%22%2C%22callback_query%22%5D"
                         + (lastUpdateId >= 0 ? "&offset=" + (lastUpdateId + 1) : "");
 
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(url))
                         .timeout(Duration.ofSeconds(LONG_POLL_TIMEOUT + 10))
-                        .GET()
-                        .build();
+                        .GET().build();
 
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> response =
+                        httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
                 if (response.statusCode() == 200) {
-                    // Success — reset back-off
                     if (currentBackoffMs != BACKOFF_INITIAL_MS) {
-                        logger.info("Network recovered. Resuming normal polling.");
+                        logger.info("Network recovered.");
                     }
                     currentBackoffMs = BACKOFF_INITIAL_MS;
 
                     JsonNode root = mapper.readTree(response.body());
                     if (root.path("ok").asBoolean()) {
                         for (JsonNode update : root.path("result")) {
-                            processUpdate(update);
+                            // Advance offset BEFORE processing — prevents replay on crash
                             long uid = update.path("update_id").asLong(-1);
                             if (uid >= 0) lastUpdateId = uid;
+                            processUpdate(update);
                         }
                     }
-                } else if (response.statusCode() == 409) {
-                    // Another getUpdates consumer (TelegramBotService in the app)
-                    // is already polling this token. Back off and let it handle things.
-                    logger.info("HTTP 409 — bot app is handling Telegram commands. Backing off for {}s.", currentBackoffMs / 1000);
-                    Thread.sleep(currentBackoffMs);
-                    currentBackoffMs = Math.min(currentBackoffMs * 2, BACKOFF_MAX_MS);
                 } else {
-                    logger.warn("Unexpected HTTP {}", response.statusCode());
+                    logger.warn("Unexpected HTTP {}: {}", response.statusCode(), response.body());
                     Thread.sleep(5_000);
                 }
 
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-            } catch (java.net.ConnectException | java.nio.channels.UnresolvedAddressException e) {
-                // Network not ready (common right after PC restart)
-                logger.warn("Network not available — retrying in {}s …", currentBackoffMs / 1000);
+            } catch (ConnectException | java.nio.channels.UnresolvedAddressException e) {
+                logger.warn("Network unavailable — retrying in {}s", currentBackoffMs / 1000);
                 try { Thread.sleep(currentBackoffMs); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
                 currentBackoffMs = Math.min(currentBackoffMs * 2, BACKOFF_MAX_MS);
             } catch (Exception e) {
@@ -177,16 +203,30 @@ public class TelegramWatcher {
         }
     }
 
-    // ── command handling ──────────────────────────────────────────────────────
+    // ── update dispatch ───────────────────────────────────────────────────────
 
     private void processUpdate(JsonNode update) {
+        // ── Inline keyboard button taps → forward to app ──────────────────────
+        JsonNode cq = update.path("callback_query");
+        if (!cq.isMissingNode()) {
+            long chatId = cq.path("message").path("chat").path("id").asLong(-1);
+            if (chatId < 0) return;
+            if (allowedChatId != 0 && chatId != allowedChatId) return;
+            forwardCallbackToApp(
+                    cq.path("id").asText(""),
+                    chatId,
+                    cq.path("message").path("message_id").asLong(-1),
+                    cq.path("data").asText("noop"));
+            return;
+        }
+
+        // ── Regular text message ──────────────────────────────────────────────
         JsonNode message = update.path("message");
         if (message.isMissingNode()) return;
 
         long chatId = message.path("chat").path("id").asLong(-1);
         if (chatId < 0) return;
 
-        // Security gate
         if (allowedChatId != 0 && chatId != allowedChatId) {
             logger.debug("Rejected message from unauthorized chat-ID {}", chatId);
             sendMessage(chatId, "⛔ Unauthorized. Your chat ID is: " + chatId);
@@ -204,51 +244,49 @@ public class TelegramWatcher {
             handleKill(chatId);
         } else if (text.startsWith("/wstatus")) {
             handleWStatus(chatId);
-        } else if (text.startsWith("/whelp") || text.startsWith("/help")) {
+        } else if (text.startsWith("/whelp")) {
             sendMessage(chatId, buildHelpMessage());
+        } else {
+            // Everything else → forward to the running bot app
+            forwardToApp(chatId, text);
         }
-        // All other commands (/startbot, /stopbot, /status, /help …) are
-        // intentionally not handled here — TelegramBotService inside the running
-        // app handles them. We simply advance the offset and move on.
     }
 
     // ── action handlers ───────────────────────────────────────────────────────
 
     private void handleLaunch(long chatId, boolean headless) {
-        // Check if already running
-        if (isBotProcessAlive()) {
-            sendMessage(chatId, "ℹ️ Bot app is already running.");
+        if (!launchLock.tryLock()) {
+            sendMessage(chatId, "⏳ Launch already in progress, please wait…");
             return;
         }
-
-        if (!botJar.exists()) {
-            sendMessage(chatId, "❌ JAR not found at:\n`" + botJar.getAbsolutePath() + "`\nCheck the path in the Telegram config panel.");
-            return;
-        }
-
         try {
-            String javaExe = ProcessHandle.current().info().command()
-                    .orElse("java"); // reuse same JVM if possible
-
-            ProcessBuilder pb;
-            if (headless) {
-                pb = new ProcessBuilder(javaExe, "-jar", botJar.getName(), "--headless");
-            } else {
-                pb = new ProcessBuilder(javaExe, "-jar", botJar.getName());
+            if (isBotProcessAlive()) {
+                sendMessage(chatId, "ℹ️ Bot app is already running.");
+                return;
             }
-            pb.directory(botJarDir);
-            pb.redirectErrorStream(false);
-            // Detach stdout/stderr so they don't block this process
-            pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
-            pb.redirectError(ProcessBuilder.Redirect.DISCARD);
-
-            botProcess = pb.start();
-            logger.info("Launched bot process PID {}", botProcess.pid());
-            sendMessage(chatId, "▶️ Bot app launched! (PID " + botProcess.pid() + ")\n"
-                    + "Use /startbot to start the automation once the app has loaded.");
-        } catch (IOException e) {
-            logger.error("Failed to launch bot: {}", e.getMessage());
-            sendMessage(chatId, "❌ Failed to launch bot: " + e.getMessage());
+            if (!botJar.exists()) {
+                sendMessage(chatId, "❌ JAR not found at:\n`" + botJar.getAbsolutePath()
+                        + "`\nCheck the path in the Telegram config panel.");
+                return;
+            }
+            try {
+                String javaExe = ProcessHandle.current().info().command().orElse("java");
+                ProcessBuilder pb = headless
+                        ? new ProcessBuilder(javaExe, "-jar", botJar.getName(), "--headless")
+                        : new ProcessBuilder(javaExe, "-jar", botJar.getName());
+                pb.directory(botJarDir);
+                pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+                pb.redirectError(ProcessBuilder.Redirect.DISCARD);
+                botProcess = pb.start();
+                logger.info("Launched bot process PID {}", botProcess.pid());
+                sendMessage(chatId, "▶️ Bot app launched! (PID " + botProcess.pid() + ")\n"
+                        + "Use /startbot to start the automation once the app has loaded.");
+            } catch (IOException e) {
+                logger.error("Failed to launch bot: {}", e.getMessage());
+                sendMessage(chatId, "❌ Failed to launch bot: " + e.getMessage());
+            }
+        } finally {
+            launchLock.unlock();
         }
     }
 
@@ -257,33 +295,25 @@ public class TelegramWatcher {
             sendMessage(chatId, "ℹ️ Bot app is not running.");
             return;
         }
-
-        // Try to kill the process we launched; fall back to killing by JAR name
         if (botProcess != null && botProcess.isAlive()) {
+            long pid = botProcess.pid();
             botProcess.destroyForcibly();
-            logger.info("Killed tracked bot process PID {}", botProcess.pid());
+            botProcess = null;
+            logger.info("Killed tracked bot process PID {}", pid);
             sendMessage(chatId, "⏹️ Bot app has been terminated.");
         } else {
-            // We didn't launch it (was already running before watcher started)
-            // Try to find and kill it by JAR name
             boolean killed = ProcessHandle.allProcesses()
                     .filter(ph -> ph.info().command().map(c -> c.toLowerCase().contains("java")).orElse(false))
-                    .filter(ph -> ph.info().arguments().map(
-                            args -> {
-                                for (String a : args) {
-                                    if (a.contains(botJar.getName())) return true;
-                                }
-                                return false;
-                            }).orElse(false))
+                    .filter(ph -> ph.info().arguments().map(a -> {
+                        for (String s : a) if (s.contains(botJar.getName())) return true;
+                        return false;
+                    }).orElse(false))
                     .findFirst()
                     .map(ph -> { ph.destroyForcibly(); return true; })
                     .orElse(false);
-
-            if (killed) {
-                sendMessage(chatId, "⏹️ Bot app has been terminated.");
-            } else {
-                sendMessage(chatId, "⚠️ Could not find a running bot process to kill.");
-            }
+            sendMessage(chatId, killed
+                    ? "⏹️ Bot app has been terminated."
+                    : "⚠️ Could not find a running bot process to kill.");
         }
     }
 
@@ -296,63 +326,136 @@ public class TelegramWatcher {
         }
     }
 
-    // ── helpers ───────────────────────────────────────────────────────────────
+    // ── forwarding ────────────────────────────────────────────────────────────
 
     /**
-     * Returns true if the bot process we launched is still alive, OR if any
-     * Java process running the bot JAR is found (covers the case where the app
-     * was started manually before the watcher began).
+     * Forward a text command to the bot app's local command server.
+     * On ConnectException the app is not running — inform the user.
      */
-    private boolean isBotProcessAlive() {
-        if (botProcess != null && botProcess.isAlive()) {
-            return true;
+    private void forwardToApp(long chatId, String text) {
+        try {
+            ObjectNode body = mapper.createObjectNode();
+            body.put("type",   "message");
+            body.put("chatId", chatId);
+            body.put("text",   text);
+
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create("http://127.0.0.1:" + localPort + "/command"))
+                    .timeout(Duration.ofSeconds(10))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
+                    .build();
+            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() != 200) {
+                logger.warn("App command server replied HTTP {}: {}", resp.statusCode(), resp.body());
+            }
+        } catch (ConnectException e) {
+            logger.info("Bot app not running — command '{}' not forwarded", text);
+            sendMessage(chatId, "🔴 Bot app is not running.\nSend /launch to start it.");
+        } catch (Exception e) {
+            logger.error("forwardToApp failed: {}", e.getMessage());
+            sendMessage(chatId, "❌ Could not reach the bot app: " + e.getMessage());
         }
-        // Also scan all processes in case the app was started some other way (e.g., IDE or raw java command)
+    }
+
+    /** Forward an inline-keyboard callback to the bot app's local command server. */
+    private void forwardCallbackToApp(String callbackId, long chatId, long messageId, String data) {
+        try {
+            ObjectNode body = mapper.createObjectNode();
+            body.put("type",       "callback");
+            body.put("chatId",     chatId);
+            body.put("messageId",  messageId);
+            body.put("callbackId", callbackId);
+            body.put("data",       data);
+
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create("http://127.0.0.1:" + localPort + "/command"))
+                    .timeout(Duration.ofSeconds(10))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
+                    .build();
+            httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+        } catch (ConnectException e) {
+            logger.info("Bot app not running — callback '{}' not forwarded", data);
+            answerCallbackQuery(callbackId, "❌ Bot app is not running");
+        } catch (Exception e) {
+            logger.error("forwardCallbackToApp failed: {}", e.getMessage());
+        }
+    }
+
+    // ── helpers ───────────────────────────────────────────────────────────────
+
+    private boolean isBotProcessAlive() {
+        if (botProcess != null) {
+            if (botProcess.isAlive()) return true;
+            botProcess = null; // clear stale reference
+        }
         return ProcessHandle.allProcesses()
                 .filter(ph -> ph.info().command().map(c -> c.toLowerCase().contains("java")).orElse(false))
                 .filter(ph -> {
-                    String cmdLine = ph.info().commandLine().orElse("");
-                    // Check if the command line contains the JAR name or any of the main classes
-                    return cmdLine.contains(botJar.getName()) ||
-                           cmdLine.contains("cl.camodev.wosbot.main.Main") ||
-                           cmdLine.contains("cl.camodev.wosbot.main.FXApp") ||
-                           cmdLine.contains("cl.camodev.wosbot.main.HeadlessApp");
+                    String cmd = ph.info().commandLine().orElse("");
+                    return cmd.contains(botJar.getName())
+                        || cmd.contains("cl.camodev.wosbot.main.Main")
+                        || cmd.contains("cl.camodev.wosbot.main.FXApp")
+                        || cmd.contains("cl.camodev.wosbot.main.HeadlessApp");
                 })
-                .findFirst()
-                .isPresent();
+                .findFirst().isPresent();
     }
 
     private static String buildHelpMessage() {
-        return
-            "╔══════════════════════════╗\n"
-          + "║   🤖  WOS Bot  •  Help   ║\n"
-          + "╚══════════════════════════╝\n"
-          + "\n"
-          + "🚀 *Process Control* _(watcher – always on)_\n"
-          + "`/launch`          — Start the bot app (open the JAR)\n"
-          + "`/launch_headless` — Start the bot app in the background without UI\n"
-          + "`/kill`            — Force-close the bot app\n"
-          + "`/wstatus`         — Check if the bot app is running\n"
-          + "\n"
-          + "⚙️ *Automation Control* _(requires app to be running)_\n"
-          + "`/startbot`    — Begin the automation routines\n"
-          + "`/stopbot`     — Pause the automation routines\n"
-          + "`/status`      — Show whether automation is running\n"
-          + "`/screenshot`  — Capture & send emulator screen\n"
-          + "`/queue`       — Show task queue with schedule/remove/execute controls\n"
-          + "\n"
-          + "❓ *Other*\n"
-          + "`/help`        — Show this message\n"
-          + "\n"
-          + "_Tip: use /launch first if the app is closed, then /startbot once it loads._";
+        return  "╔══════════════════════════╗\n"
+              + "║   🤖  WOS Bot  •  Help   ║\n"
+              + "╚══════════════════════════╝\n\n"
+              + "🚀 *Process Control* _(watcher – always on)_\n"
+              + "`/launch`          — Start the bot app\n"
+              + "`/launch_headless` — Start bot app without UI\n"
+              + "`/kill`            — Force-close the bot app\n"
+              + "`/wstatus`         — Check if the bot app is running\n\n"
+              + "⚙️ *Automation Control* _(requires app to be running)_\n"
+              + "`/startbot`   — Begin the automation routines\n"
+              + "`/stopbot`    — Pause the automation routines\n"
+              + "`/status`     — Show whether automation is running\n"
+              + "`/screenshot` — Capture & send emulator screen\n"
+              + "`/queue`      — Task queue with schedule/remove/run\n\n"
+              + "❓ *Other*\n"
+              + "`/help` or `/whelp` — Show this message\n\n"
+              + "_Tip: use /launch first, then /startbot once the app loads._";
     }
 
+    /** Send a Telegram message with the persistent reply keyboard. */
     private void sendMessage(long chatId, String text) {
         try {
             ObjectNode body = mapper.createObjectNode();
-            body.put("chat_id", chatId);
-            body.put("text", text);
+            body.put("chat_id",    chatId);
+            body.put("text",       text);
             body.put("parse_mode", "Markdown");
+
+            // Persistent reply keyboard — identical to TelegramBotService.sendMessage()
+            ArrayNode keyboard = mapper.createArrayNode();
+            ArrayNode row1 = mapper.createArrayNode();
+            row1.add(mapper.createObjectNode().put("text", "📸 SCREENSHOT"));
+            row1.add(mapper.createObjectNode().put("text", "📋 QUEUE"));
+            row1.add(mapper.createObjectNode().put("text", "📈 STATS"));
+            keyboard.add(row1);
+            ArrayNode row2 = mapper.createArrayNode();
+            row2.add(mapper.createObjectNode().put("text", "▶️ START BOT"));
+            row2.add(mapper.createObjectNode().put("text", "⏹️ STOP BOT"));
+            keyboard.add(row2);
+            ArrayNode row3 = mapper.createArrayNode();
+            row3.add(mapper.createObjectNode().put("text", "👥 PROFILES"));
+            row3.add(mapper.createObjectNode().put("text", "📄 LOGS"));
+            row3.add(mapper.createObjectNode().put("text", "🔄 REBOOT"));
+            keyboard.add(row3);
+            ArrayNode row4 = mapper.createArrayNode();
+            row4.add(mapper.createObjectNode().put("text", "ℹ️ STATUS"));
+            row4.add(mapper.createObjectNode().put("text", "❓ HELP"));
+            keyboard.add(row4);
+
+            ObjectNode markup = mapper.createObjectNode();
+            markup.set("keyboard", keyboard);
+            markup.put("resize_keyboard", true);
+            markup.put("is_persistent",   true);
+            body.set("reply_markup", markup);
 
             HttpRequest req = HttpRequest.newBuilder()
                     .uri(URI.create(API_BASE + token + "/sendMessage"))
@@ -366,20 +469,36 @@ public class TelegramWatcher {
         }
     }
 
+    /** Answer a Telegram callback query (shows a brief pop-up on the user's device). */
+    private void answerCallbackQuery(String callbackId, String notice) {
+        try {
+            ObjectNode body = mapper.createObjectNode();
+            body.put("callback_query_id", callbackId);
+            if (notice != null && !notice.isBlank()) body.put("text", notice);
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(API_BASE + token + "/answerCallbackQuery"))
+                    .timeout(Duration.ofSeconds(5))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
+                    .build();
+            httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+        } catch (Exception e) {
+            logger.error("answerCallbackQuery failed: {}", e.getMessage());
+        }
+    }
+
     private static Properties loadConfig() throws IOException {
         Path cfg = configFilePath();
         if (!Files.exists(cfg)) {
-            // Create a template file so the user knows what to fill in
             Files.createDirectories(cfg.getParent());
-            String template =
-                    "# WOS Bot – Telegram Watcher configuration\n" +
-                    "# Generated automatically. You can also edit this by hand.\n" +
-                    "token=\n" +
-                    "chatId=\n" +
-                    "botJarPath=\n";
-            Files.writeString(cfg, template);
+            Files.writeString(cfg,
+                    "# WOS Bot – Telegram Watcher configuration\n"
+                  + "# Generated automatically. You can also edit this by hand.\n"
+                  + "token=\n"
+                  + "chatId=\n"
+                  + "botJarPath=\n"
+                  + "localPort=8765\n");
             System.out.println("[INFO] Created config template at: " + cfg);
-            System.out.println("[INFO] Fill it in and restart, or save via the bot's Telegram config panel.");
         }
         Properties props = new Properties();
         try (FileInputStream fis = new FileInputStream(cfg.toFile())) {

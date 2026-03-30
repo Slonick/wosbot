@@ -1,3 +1,0 @@
-C:\Users\parad\OneDrive\Desktop\wosbot-main\wos-hmi\src\main\resources\cl\camodev\wosbot\debugging\view\debugging.css
-C:\Users\parad\OneDrive\Desktop\wosbot-main\wos-hmi\src\main\resources\cl\camodev\wosbot\giftcode\view\giftcode.css
-C:\Users\parad\OneDrive\Desktop\wosbot-main\wos-hmi\src\main\resources\styles\style.css
