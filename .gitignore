@@ -73,3 +73,13 @@ Thumbs.db
 # Misc cache
 .cache/
 .vite/
+
+# Additional IDE files
+.metadata/
+nbproject/private/
+build/
+*.bak
+*.swp
+*~
+dependency-reduced-pom.xml
+.scannerwork/

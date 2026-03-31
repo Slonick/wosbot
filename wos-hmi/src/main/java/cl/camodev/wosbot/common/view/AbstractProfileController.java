@@ -62,6 +62,58 @@ public abstract class AbstractProfileController implements IProfileLoadListener,
 		priorityListEnumClasses.forEach(this::initializePriorityListFromEnum);
 	}
 
+	/**
+	 * Extracts all mapped settings into a searchable map of configuration keys and their user-friendly descriptions.
+	 * Prioritizes actual UI text if available, falling back to a formatted enum key name.
+	 */
+	public Map<EnumConfigurationKey, String> getRegisteredSettings() {
+		Map<EnumConfigurationKey, String> settingsDesc = new HashMap<>();
+
+		checkBoxMappings.forEach((node, key) -> {
+			String text = node.getText();
+			settingsDesc.put(key, (text != null && !text.isBlank()) ? text : formatEnumName(key.name()));
+		});
+
+		radioButtonMappings.forEach((node, key) -> {
+			String text = node.getText();
+			settingsDesc.put(key, (text != null && !text.isBlank()) ? text : formatEnumName(key.name()));
+		});
+
+		textFieldMappings.forEach((node, key) -> {
+			String text = node.getPromptText();
+			settingsDesc.put(key, (text != null && !text.isBlank()) ? text : formatEnumName(key.name()));
+		});
+
+		comboBoxMappings.forEach((node, key) -> {
+			String text = node.getPromptText();
+			settingsDesc.put(key, (text != null && !text.isBlank()) ? text : formatEnumName(key.name()));
+		});
+
+		checkComboBoxMappings.forEach((node, key) -> {
+			settingsDesc.put(key, formatEnumName(key.name()));
+		});
+
+		priorityListMappings.forEach((node, key) -> {
+			settingsDesc.put(key, formatEnumName(key.name()));
+		});
+
+		return settingsDesc;
+	}
+
+	private String formatEnumName(String name) {
+		if (name == null) return "";
+		// e.g., ALLIANCE_SHOP_ENABLED_BOOL -> Alliance Shop Enabled Bool
+		String[] words = name.toLowerCase().split("_");
+		StringBuilder sb = new StringBuilder();
+		for (String word : words) {
+			if (!word.isEmpty()) {
+				sb.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1)).append(" ");
+			}
+		}
+		return sb.toString().trim();
+	}
+
+
 	protected void createToggleGroup(RadioButton... radioButtons) {
 		ToggleGroup toggleGroup = new ToggleGroup();
 		for (RadioButton radioButton : radioButtons) {

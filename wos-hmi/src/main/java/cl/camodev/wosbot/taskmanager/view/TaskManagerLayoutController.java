@@ -27,6 +27,9 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
+import javafx.geometry.Pos;
+import javafx.scene.paint.Color;
+import org.kordamp.ikonli.javafx.FontIcon;
 import javafx.util.Duration;
 
 import java.time.LocalDateTime;
@@ -89,6 +92,10 @@ public class TaskManagerLayoutController implements IProfileDataChangeListener {
 		loadProfiles();
 		setupFilterListener();
 
+		if (btnToggleView != null) {
+			btnToggleView.setText("Timeline View");
+		}
+
 		Timeline ticker = new Timeline(new KeyFrame(Duration.seconds(1), evt -> updateTimeValues()));
 		ticker.setCycleCount(Animation.INDEFINITE);
 		ticker.play();
@@ -99,13 +106,18 @@ public class TaskManagerLayoutController implements IProfileDataChangeListener {
 		showingGanttView = !showingGanttView;
 		
 		if (showingGanttView) {
-			// Show Gantt view
 			showGanttView();
-			btnToggleView.setText("📋 Table View");
+			btnToggleView.setText("Table View");
 		} else {
-			// Show standard table view
 			showTableView();
-			btnToggleView.setText("📊 Timeline View");
+			btnToggleView.setText("Timeline View");
+		}
+	}
+
+	@FXML
+	private void handleClearTaskFilter() {
+		if (txtFilterTaskName != null) {
+			txtFilterTaskName.clear();
 		}
 	}
 	
@@ -506,19 +518,36 @@ public class TaskManagerLayoutController implements IProfileDataChangeListener {
 		});
 
 		TableColumn<TaskManagerAux, Void> colActions = new TableColumn<>("Actions");
-		colActions.setPrefWidth(250); // Increase width to accommodate the third button
+		colActions.setPrefWidth(200);
 		colActions.setCellFactory(column -> new TableCell<>() {
-			private final Button btnSchedule = new Button("Schedule");
-			private final Button btnRemove = new Button("Remove");
-			private final Button btnExecute = new Button("Execute");
+			private final Button btnSchedule = new Button();
+			private final Button btnRemove = new Button();
+			private final Button btnExecute = new Button();
+			private final HBox actionBox = new HBox(12, btnSchedule, btnRemove, btnExecute);
 
 			{
-				btnSchedule.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white; -fx-font-size: 11px; " +
-						"-fx-padding: 4px 8px; -fx-border-radius: 3px; -fx-background-radius: 3px;");
-				btnRemove.setStyle("-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-size: 11px; " +
-						"-fx-padding: 4px 8px; -fx-border-radius: 3px; -fx-background-radius: 3px;");
-				btnExecute.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 11px; " +
-						"-fx-padding: 4px 8px; -fx-border-radius: 3px; -fx-background-radius: 3px;");
+				actionBox.setAlignment(Pos.CENTER);
+				
+				FontIcon iconSchedule = new FontIcon("mdi2h-history");
+				iconSchedule.setIconSize(16);
+				iconSchedule.setStyle("-fx-icon-color: #ffce54;"); // gold
+				btnSchedule.setGraphic(iconSchedule);
+				btnSchedule.getStyleClass().add("action-icon-button");
+				btnSchedule.setTooltip(new Tooltip("Schedule Task"));
+
+				FontIcon iconRemove = new FontIcon("mdi2c-close");
+				iconRemove.setIconSize(16);
+				iconRemove.setStyle("-fx-icon-color: #f85149;"); // red
+				btnRemove.setGraphic(iconRemove);
+				btnRemove.getStyleClass().add("action-icon-button");
+				btnRemove.setTooltip(new Tooltip("Remove Task"));
+
+				FontIcon iconExecute = new FontIcon("mdi2p-play-outline");
+				iconExecute.setIconSize(16);
+				iconExecute.setStyle("-fx-icon-color: #2ea043;"); // green
+				btnExecute.setGraphic(iconExecute);
+				btnExecute.getStyleClass().add("action-icon-button");
+				btnExecute.setTooltip(new Tooltip("Execute Task"));
 
 				btnSchedule.setOnAction(ev -> {
 					TaskManagerAux item = getTableView().getItems().get(getIndex());
@@ -561,59 +590,32 @@ public class TaskManagerLayoutController implements IProfileDataChangeListener {
 			@Override
 			protected void updateItem(Void item, boolean empty) {
 				super.updateItem(item, empty);
-				if (empty) {
-					setGraphic(null);
-				} else {
-					// Get the task data to check its state
+				if (!empty) {
 					TaskManagerAux task = getTableRow().getItem();
-
 					if (task != null) {
 						// Check if queue is active for this profile
 						boolean queueActive = ServScheduler.getServices().getQueueManager().getQueue(task.getProfileId()) != null;
 
 						// Enable/disable schedule button based on queue status
 						btnSchedule.setDisable(!queueActive);
-
-						// Update schedule button style when disabled
-						if (!queueActive) {
-							btnSchedule.setStyle("-fx-background-color: #757575; -fx-text-fill: #bdbdbd; -fx-font-size: 11px; " +
-									"-fx-padding: 4px 8px; -fx-border-radius: 3px; -fx-background-radius: 3px;");
-						} else {
-							btnSchedule.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white; -fx-font-size: 11px; " +
-									"-fx-padding: 4px 8px; -fx-border-radius: 3px; -fx-background-radius: 3px;");
-						}
+						((FontIcon) btnSchedule.getGraphic()).setIconColor(Color.web(queueActive ? "#636a75" : "#3b3f4c"));
 
 						// Enable/disable remove button based on task state
 						boolean canRemove = task.scheduledProperty().get() && !task.executingProperty().get();
 						btnRemove.setDisable(!canRemove);
+						((FontIcon) btnRemove.getGraphic()).setIconColor(Color.web(canRemove ? "#f85149" : "#3b3f4c"));
 
-						// Update remove button style when disabled
-						if (!canRemove) {
-							btnRemove.setStyle("-fx-background-color: #757575; -fx-text-fill: #bdbdbd; -fx-font-size: 11px; " +
-									"-fx-padding: 4px 8px; -fx-border-radius: 3px; -fx-background-radius: 3px;");
-						} else {
-							btnRemove.setStyle("-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-size: 11px; " +
-									"-fx-padding: 4px 8px; -fx-border-radius: 3px; -fx-background-radius: 3px;");
-						}
-
-						// Enable/disable execute button based on queue status and task execution state
+						// Disable execute if queue is inactive or task is executing
 						boolean canExecute = queueActive && !task.executingProperty().get();
 						btnExecute.setDisable(!canExecute);
+						((FontIcon) btnExecute.getGraphic()).setIconColor(Color.web(canExecute ? "#2ea043" : "#3b3f4c"));
 
-						// Update execute button style when disabled
-						if (!canExecute) {
-							btnExecute.setStyle("-fx-background-color: #757575; -fx-text-fill: #bdbdbd; -fx-font-size: 11px; " +
-									"-fx-padding: 4px 8px; -fx-border-radius: 3px; -fx-background-radius: 3px;");
-						} else {
-							btnExecute.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 11px; " +
-									"-fx-padding: 4px 8px; -fx-border-radius: 3px; -fx-background-radius: 3px;");
-						}
+						setGraphic(actionBox);
+					} else {
+						setGraphic(null);
 					}
-
-					// Create HBox to hold all three buttons
-					HBox buttonBox = new HBox(5);
-					buttonBox.getChildren().addAll(btnSchedule, btnRemove, btnExecute);
-					setGraphic(buttonBox);
+				} else {
+					setGraphic(null);
 				}
 			}
 		});

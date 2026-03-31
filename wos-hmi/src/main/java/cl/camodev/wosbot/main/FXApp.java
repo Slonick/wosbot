@@ -10,9 +10,11 @@ import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import javafx.scene.paint.Color;
+import atlantafx.base.theme.PrimerDark;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 import java.io.IOException;
 import java.util.Objects;
@@ -20,12 +22,12 @@ import java.util.prefs.Preferences;
 
 public class FXApp extends Application {
 	private static final Logger logger = LoggerFactory.getLogger(FXApp.class);
-	private static final String KEY_X      = "windowX";
-	private static final String KEY_Y      = "windowY";
-	private static final String KEY_W      = "windowWidth";
-	private static final String KEY_H      = "windowHeight";
-	private static final double DEFAULT_W  = 900;
-	private static final double DEFAULT_H  = 500;
+	private static final String KEY_X = "windowX";
+	private static final String KEY_Y = "windowY";
+	private static final String KEY_W = "windowWidth";
+	private static final String KEY_H = "windowHeight";
+	private static final double DEFAULT_W = 900;
+	private static final double DEFAULT_H = 500;
 
 	private Preferences prefs;
 
@@ -35,28 +37,33 @@ public class FXApp extends Application {
 
 	@Override
 	public void start(Stage stage) throws IOException {
+		// Apply AtlantaFX dark theme globally
+		Application.setUserAgentStylesheet(new PrimerDark().getUserAgentStylesheet());
+
 		// Inicializar Preferences
 		Image appIcon = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/icons/appIcon.png")));
 		prefs = Preferences.userRoot().node(FXApp.class.getName());
 
 		// Cargar FXML y controlador
 		FXMLLoader fxmlLoader = new FXMLLoader(
-				LauncherLayoutController.class.getResource("LauncherLayout.fxml")
-		);
+				LauncherLayoutController.class.getResource("LauncherLayout.fxml"));
 		LauncherLayoutController controller = new LauncherLayoutController(stage);
 		fxmlLoader.setController(controller);
 		Parent root = fxmlLoader.load();
 
 		// Crear escena con tamaño por defecto primero
 		Scene scene = new Scene(root, DEFAULT_W, DEFAULT_H);
+		scene.setFill(Color.web("#1E1E1E"));
 		scene.getStylesheets().add(ILauncherConstants.getCssPath());
+		stage.initStyle(StageStyle.UNDECORATED);
 		stage.setScene(scene);
+		WindowResizer.makeResizable(stage);
 		stage.getIcons().add(appIcon);
 		stage.setTitle("Launcher");
 
-        // set minimum height and width so the "run" button is always visible
-        stage.setMinHeight(750);
-        stage.setMinWidth(1050);
+		// set minimum height and width
+		stage.setMinHeight(450);
+		stage.setMinWidth(660);
 		// Mostrar la ventana primero para que JavaFX calcule los tamaños correctamente
 		stage.show();
 
@@ -82,7 +89,8 @@ public class FXApp extends Application {
 				stage.setX(savedX);
 				stage.setY(savedY);
 			} else {
-				// La posición guardada no es válida (monitor desconectado), usar monitor principal
+				// La posición guardada no es válida (monitor desconectado), usar monitor
+				// principal
 				positionOnPrimaryScreen(stage, savedWidth, savedHeight);
 			}
 		}
@@ -107,13 +115,15 @@ public class FXApp extends Application {
 	}
 
 	/**
-	 * Verifica si la posición guardada es válida en alguno de los monitores disponibles.
+	 * Verifica si la posición guardada es válida en alguno de los monitores
+	 * disponibles.
 	 */
 	private boolean isPositionValidOnAnyScreen(double x, double y, double width, double height) {
 		for (Screen screen : Screen.getScreens()) {
 			Rectangle2D bounds = screen.getVisualBounds();
 
-			// Verificar si al menos una parte significativa de la ventana está visible en este monitor
+			// Verificar si al menos una parte significativa de la ventana está visible en
+			// este monitor
 			// La ventana debe tener al menos 100x100 píxeles visibles en el monitor
 			double visibleLeft = Math.max(x, bounds.getMinX());
 			double visibleTop = Math.max(y, bounds.getMinY());

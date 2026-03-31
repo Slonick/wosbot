@@ -1,6 +1,7 @@
 package cl.camodev.wosbot.profile.view;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -20,16 +21,22 @@ import javafx.animation.TranslateTransition;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckMenuItem;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
@@ -39,13 +46,16 @@ import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Callback;
 import javafx.util.Duration;
+import org.kordamp.ikonli.javafx.FontIcon;
 
 public class ProfileManagerLayoutController implements IProfileChangeObserver {
 
 	private final ExecutorService profileQueueExecutor = Executors.newSingleThreadExecutor();
 	private ProfileManagerActionController profileManagerActionController;
 	private ObservableList<ProfileAux> profiles;
+	private FilteredList<ProfileAux> filteredProfiles;
 	private SortedList<ProfileAux> sortedProfiles;
+
 	@FXML
 	private TableView<ProfileAux> tableviewLogMessages;
 	@FXML
@@ -61,7 +71,18 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 	@FXML
 	private TableColumn<ProfileAux, String> columnStatus;
 	@FXML
+	private TableColumn<ProfileAux, String> columnFurnaceLevel;
+	@FXML
+	private TableColumn<ProfileAux, String> columnStamina;
+	@FXML
 	private Button btnBulkUpdate;
+	@FXML
+	private TextField txtSearchProfiles;
+	@FXML
+	private ComboBox<String> comboBoxSortBy;
+	@FXML
+	private Button btnColumnSettings;
+
 	private Long loadedProfileId;
 	private List<IProfileLoadListener> profileLoadListeners;
 
@@ -69,22 +90,123 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 	private void initialize() {
 		initializeController();
 		initializeTableView();
+		initializeSearchAndSort();
 		loadProfiles();
         ServProfiles.getServices().addProfileDataChangeListener(dto -> Platform.runLater(() -> handleProfileDataChange(dto)));
-
 	}
 
 	private void initializeController() {
 		profileManagerActionController = new ProfileManagerActionController(this);
 	}
 
+	private void initializeSearchAndSort() {
+		// Sort by options
+		ObservableList<String> sortOptions = FXCollections.observableArrayList("Name", "Priority", "Status", "Emulator");
+		comboBoxSortBy.setItems(sortOptions);
+		comboBoxSortBy.getSelectionModel().selectFirst();
+
+		// Search listener
+		if (txtSearchProfiles != null) {
+			txtSearchProfiles.textProperty().addListener((obs, oldVal, newVal) -> applyFilter(newVal));
+		}
+
+		// Sort listener
+		comboBoxSortBy.valueProperty().addListener((obs, oldVal, newVal) -> applySort(newVal));
+	}
+
+	@FXML
+	private void handleClearSearch(ActionEvent event) {
+		if (txtSearchProfiles != null) {
+			txtSearchProfiles.clear();
+		}
+	}
+
+	private void applyFilter(String searchText) {
+		if (filteredProfiles == null) return;
+		String lSearch = (searchText == null) ? "" : searchText.toLowerCase().trim();
+		filteredProfiles.setPredicate(profile -> {
+			if (lSearch.isEmpty()) return true;
+			String name = profile.getName();
+			return name != null && name.toLowerCase().contains(lSearch);
+		});
+	}
+
+	private void applySort(String sortBy) {
+		if (sortedProfiles == null || sortBy == null) return;
+		switch (sortBy) {
+			case "Priority":
+				sortedProfiles.setComparator(Comparator.comparingLong(p -> p.getPriority() == null ? Long.MAX_VALUE : p.getPriority()));
+				break;
+			case "Status":
+				sortedProfiles.setComparator(Comparator.comparing(p -> p.getStatus() == null ? "" : p.getStatus()));
+				break;
+			case "Emulator":
+				sortedProfiles.setComparator(Comparator.comparing(p -> p.getEmulatorNumber() == null ? "" : String.valueOf(p.getEmulatorNumber())));
+				break;
+			default: // Name
+				sortedProfiles.setComparator(Comparator.comparing(p -> p.getName() == null ? "" : p.getName().toLowerCase()));
+				break;
+		}
+	}
+
+	@FXML
+	private void handleColumnSettings(ActionEvent event) {
+		ContextMenu menu = new ContextMenu();
+
+		addColumnToggle(menu, "Enabled", columnEnabled);
+		addColumnToggle(menu, "Emulator", columnEmulatorNumber);
+		addColumnToggle(menu, "Furnace Level", columnFurnaceLevel);
+		addColumnToggle(menu, "Name", columnProfileName);
+		addColumnToggle(menu, "Priority", columnPriority);
+		addColumnToggle(menu, "Status", columnStatus);
+		addColumnToggle(menu, "Stamina", columnStamina);
+		addColumnToggle(menu, "Actions", columnDelete);
+
+		menu.show(btnColumnSettings,
+				javafx.geometry.Side.BOTTOM,
+				0, 4);
+	}
+
+	private void addColumnToggle(ContextMenu menu, String label, TableColumn<?, ?> column) {
+		if (column == null) return;
+		CheckMenuItem item = new CheckMenuItem(label);
+		item.setSelected(column.isVisible());
+		item.setOnAction(e -> column.setVisible(item.isSelected()));
+		menu.getItems().add(item);
+	}
+
 	private void initializeTableView() {
 		profiles = FXCollections.observableArrayList();
+		filteredProfiles = new FilteredList<>(profiles);
 
 		columnProfileName.setCellValueFactory(cellData -> cellData.getValue().nameProperty());
 		columnEmulatorNumber.setCellValueFactory(cellData -> cellData.getValue().emulatorNumberProperty());
 		columnPriority.setCellValueFactory(cellData -> cellData.getValue().priorityProperty().asObject());
 		columnStatus.setCellValueFactory(cellData -> cellData.getValue().statusProperty());
+
+		// Furnace Level column — display "-" placeholder (model may not have this field yet)
+		if (columnFurnaceLevel != null) {
+			columnFurnaceLevel.setCellFactory(col -> new TableCell<ProfileAux, String>() {
+				@Override
+				protected void updateItem(String item, boolean empty) {
+					super.updateItem(item, empty);
+					setText(empty ? null : "-");
+					setAlignment(Pos.CENTER);
+				}
+			});
+		}
+
+		// Stamina column — display "-" placeholder
+		if (columnStamina != null) {
+			columnStamina.setCellFactory(col -> new TableCell<ProfileAux, String>() {
+				@Override
+				protected void updateItem(String item, boolean empty) {
+					super.updateItem(item, empty);
+					setText(empty ? null : "-");
+					setAlignment(Pos.CENTER);
+				}
+			});
+		}
 
 		// Add double-click event handler to open edit dialog
 		tableviewLogMessages.setRowFactory(tv -> {
@@ -104,24 +226,34 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 				return new TableCell<ProfileAux, Void>() {
 					private final Button btnDelete = new Button();
 					private final Button btnLoad = new Button();
-//					private final Button btnSave = new Button();
+					private final Button btnDuplicate = new Button();
 
 					{
-						// Assign icons to buttons
-						btnDelete.setGraphic(loadIcon("/icons/buttons/delete.png"));
-						btnLoad.setGraphic(loadIcon("/icons/buttons/load.png"));
-//						btnSave.setGraphic(loadIcon("/icons/buttons/save.png"));
+						FontIcon iconDelete = new FontIcon("mdi2c-close");
+						iconDelete.setIconSize(16);
+						iconDelete.setStyle("-fx-icon-color: #f85149;"); // red X
+						btnDelete.setGraphic(iconDelete);
+						btnDelete.getStyleClass().add("action-icon-button");
+						btnDelete.setTooltip(new Tooltip("Delete Profile"));
 
-						// Configure the size of the buttons (without text)
-						btnDelete.setPrefSize(30, 30);
-						btnLoad.setPrefSize(30, 30);
-//						btnSave.setPrefSize(30, 30);
+						FontIcon iconDuplicate = new FontIcon("mdi2c-content-copy");
+						iconDuplicate.setIconSize(16);
+						iconDuplicate.setStyle("-fx-icon-color: #388bfd;"); // blue copy
+						btnDuplicate.setGraphic(iconDuplicate);
+						btnDuplicate.getStyleClass().add("action-icon-button");
+						btnDuplicate.setTooltip(new Tooltip("Duplicate Profile"));
 
-						btnDelete.setStyle("-fx-background-color: transparent; -fx-border-color: transparent;");
-						btnLoad.setStyle("-fx-background-color: transparent; -fx-border-color: transparent;");
-//						btnSave.setStyle("-fx-background-color: transparent; -fx-border-color: transparent;");
+						FontIcon iconLoad = new FontIcon("mdi2p-play-outline");
+						iconLoad.setIconSize(16);
+						iconLoad.setStyle("-fx-icon-color: #2ea043;"); // green play
+						btnLoad.setGraphic(iconLoad);
+						btnLoad.getStyleClass().add("action-icon-button");
+						btnLoad.setTooltip(new Tooltip("Load Profile"));
 
-						// Action for the Delete button
+						btnDuplicate.setOnAction(e -> {
+							System.out.println("User clicked duplicate. Add actual duplication logic if needed.");
+						});
+
 						btnDelete.setOnAction((ActionEvent event) -> {
 							if (getTableView().getItems().size() <= 1) {
 								Alert alert = new Alert(Alert.AlertType.WARNING);
@@ -133,8 +265,6 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 							}
 
 							ProfileAux currentProfile = getTableView().getItems().get(getIndex());
-							System.out.println("Deleting profile with ID: " + currentProfile.getId());
-
 							boolean deletionResult = profileManagerActionController.deleteProfile(new DTOProfiles(currentProfile.getId()));
 
 							Alert alert;
@@ -153,45 +283,11 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 							alert.showAndWait();
 						});
 
-						// Action for the Load button
 						btnLoad.setOnAction((ActionEvent event) -> {
 							ProfileAux currentProfile = getTableView().getItems().get(getIndex());
-							System.out.println("Loading profile with ID: " + currentProfile.getId());
 							loadedProfileId = currentProfile.getId();
 							notifyProfileLoadListeners(currentProfile);
 						});
-
-						// Action for the Save button
-//						btnSave.setOnAction((ActionEvent event) -> {
-//							ProfileAux currentProfile = getTableView().getItems().get(getIndex());
-//							System.out.println("Saving profile with ID: " + currentProfile.getId());
-//							boolean saved = profileManagerActionController.saveProfile(currentProfile);
-//
-//							Alert alert;
-//							if (saved) {
-//								alert = new Alert(Alert.AlertType.INFORMATION);
-//								alert.setTitle("SUCCESS UPDATE");
-//								alert.setHeaderText(null);
-//								alert.setContentText("Profile updated successfully.");
-//								loadProfiles();
-//							} else {
-//								alert = new Alert(Alert.AlertType.ERROR);
-//								alert.setTitle("ERROR UPDATE");
-//								alert.setHeaderText(null);
-//								alert.setContentText("Error updating profile.");
-//
-//							}
-//							alert.showAndWait();
-//						});
-					}
-
-					// Method to load an icon from resources
-					private ImageView loadIcon(String path) {
-						Image image = new Image(getClass().getResourceAsStream(path));
-						ImageView imageView = new ImageView(image);
-						imageView.setFitWidth(16);
-						imageView.setFitHeight(16);
-						return imageView;
 					}
 
 					@Override
@@ -200,11 +296,11 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 						if (empty) {
 							setGraphic(null);
 						} else {
-							HBox buttonContainer = new HBox(5, btnLoad/* , btnSave */, btnDelete);
+							HBox buttonContainer = new HBox(5, btnLoad, btnDuplicate, btnDelete);
+							buttonContainer.setAlignment(Pos.CENTER);
 							setGraphic(buttonContainer);
 						}
 					}
-
 				};
 			}
 		});
@@ -219,29 +315,24 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 			private final Rectangle background;
 
 			{
-				// Smaller switch background
-				background = new Rectangle(30, 15, Color.LIGHTGRAY);
-				background.setArcWidth(15);
-				background.setArcHeight(15);
+				background = new Rectangle(32, 16, Color.web("#3b3f4c"));
+				background.setArcWidth(16);
+				background.setArcHeight(16);
 
-				// Smaller circle (knob)
-				knob = new Circle(6, Color.WHITE);
-				knob.setTranslateX(-7); // Initial position
+				knob = new Circle(6, Color.web("#1a1c24"));
+				knob.setTranslateX(-8);
 
-				// Switch container
 				switchContainer = new StackPane(background, knob);
 				switchContainer.setMinSize(40, 20);
 				switchContainer.setMaxSize(40, 20);
-				switchContainer.setAlignment(Pos.CENTER); // Center the elements within the StackPane
+				switchContainer.setAlignment(Pos.CENTER);
 				switchContainer.setOnMouseClicked(event -> toggleSwitch());
 
-				// Action when pressing the ToggleButton
 				toggleButton.setOnAction(event -> {
 					ProfileAux currentProfile = getTableView().getItems().get(getIndex());
 					boolean newValue = toggleButton.isSelected();
 					currentProfile.setEnabled(newValue);
 					animateSwitch(newValue);
-
 				});
 			}
 
@@ -250,7 +341,6 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 				toggleButton.setSelected(newValue);
 				animateSwitch(newValue);
 
-				// Update the object in the table
 				ProfileAux currentProfile = getTableView().getItems().get(getIndex());
 				if (currentProfile != null) {
 					currentProfile.setEnabled(newValue);
@@ -260,8 +350,8 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 
 			private void animateSwitch(boolean isOn) {
 				TranslateTransition slide = new TranslateTransition(Duration.millis(180), knob);
-				slide.setToX(isOn ? 7 : -7); // Shorter movement
-				background.setFill(isOn ? Color.GREEN : Color.LIGHTGRAY);
+				slide.setToX(isOn ? 8 : -8);
+				background.setFill(isOn ? Color.web("#ffcd53") : Color.web("#3b3f4c"));
 				slide.play();
 			}
 
@@ -272,20 +362,17 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 					setGraphic(null);
 				} else {
 					toggleButton.setSelected(item);
-					background.setFill(item ? Color.GREEN : Color.LIGHTGRAY);
-					knob.setTranslateX(item ? 7 : -7);
-
-					// Ensure the switchContainer is centered in the cell
+					background.setFill(item ? Color.web("#ffcd53") : Color.web("#3b3f4c"));
+					knob.setTranslateX(item ? 8 : -8);
 					setGraphic(switchContainer);
-					setAlignment(Pos.CENTER); // Center the StackPane in the cell
+					setAlignment(Pos.CENTER);
 				}
 			}
 		});
 
-		sortedProfiles = new SortedList<>(profiles);
+		sortedProfiles = new SortedList<>(filteredProfiles);
 		sortedProfiles.comparatorProperty().bind(tableviewLogMessages.comparatorProperty());
 		tableviewLogMessages.setItems(sortedProfiles);
-
 	}
 
 	@FXML
@@ -312,10 +399,12 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 
 				if (!profiles.isEmpty()) {
 					ProfileAux selectedProfile = profiles.stream().filter(p -> p.getId().equals(loadedProfileId)).findFirst().orElse(profiles.get(0));
-
 					notifyProfileLoadListeners(selectedProfile);
 					loadedProfileId = selectedProfile.getId();
 				}
+
+				// Re-apply current sort after loading
+				applySort(comboBoxSortBy != null ? comboBoxSortBy.getValue() : "Name");
 			});
 		});
 	}
@@ -414,13 +503,11 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 			tableviewLogMessages.refresh();
 			tableviewLogMessages.sort();
 		});
-
 	}
 
 	@Override
 	public void notifyProfileChange(EnumConfigurationKey key, Object value) {
 		try {
-
 			ProfileAux loadedProfile = profiles.stream().filter(profile -> profile.getId().equals(loadedProfileId)).findFirst().orElse(null);
 
 			if (loadedProfile == null) {

@@ -9,7 +9,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.shape.Rectangle?>
 
-<VBox spacing="16" style="-fx-background-color: #1e1e1e; -fx-padding: 24;" xmlns="http://javafx.com/javafx/24.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="cl.camodev.wosbot.taskmanager.view.TaskGanttOverviewController">
+<VBox spacing="16" style="-fx-background-color: #11141A; -fx-padding: 24;" xmlns="http://javafx.com/javafx/24.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="cl.camodev.wosbot.taskmanager.view.TaskGanttOverviewController">
     <!-- Title, Legend and View Toggle -->
     <HBox spacing="20" style="-fx-padding: 0 0 12 0;" alignment="CENTER_LEFT">
         <children>

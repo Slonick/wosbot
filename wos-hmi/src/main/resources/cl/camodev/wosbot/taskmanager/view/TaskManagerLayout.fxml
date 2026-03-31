@@ -2,38 +2,48 @@
 
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TextField?>
-<?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.Region?>
-<?import javafx.geometry.Insets?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
-<VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="600.0" prefWidth="1200.0" styleClass="root" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1">
+<VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308"
+      spacing="6" style="-fx-padding: 8 16 16 16;"
+      xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1">
    <children>
-      <!-- Filter and Toggle Section -->
-      <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-background-color: #2E2E2E; -fx-padding: 10px;">
+      <!-- Top Search + Action Bar -->
+      <HBox alignment="CENTER_LEFT" spacing="12" styleClass="control-top-bar">
          <children>
-            <Label text="Filter by name:" style="-fx-text-fill: white; -fx-font-size: 14px;" />
-            <TextField fx:id="txtFilterTaskName" promptText="Enter task name..." prefWidth="250.0"
-                      style="-fx-background-color: #404040; -fx-text-fill: white; -fx-prompt-text-fill: #AAAAAA;" />
-            <!-- Spacer to push toggle button to the right -->
+            <!-- Search Field -->
+            <HBox alignment="CENTER_LEFT" spacing="0" HBox.hgrow="ALWAYS" styleClass="log-search-wrapper">
+               <children>
+                  <FontIcon iconLiteral="mdi2m-magnify" iconSize="16" iconColor="#636a75" />
+                  <TextField fx:id="txtFilterTaskName" promptText="Search tasks..."
+                             HBox.hgrow="ALWAYS" styleClass="control-search-field" />
+                  <Button fx:id="btnClearFilter" text="✕" onAction="#handleClearTaskFilter"
+                          styleClass="search-clear-btn" />
+               </children>
+            </HBox>
+
             <Region HBox.hgrow="ALWAYS" />
-            <!-- Toggle Button -->
-            <Button fx:id="btnToggleView" text="📊 Timeline View" onAction="#handleToggleView" 
-                   style="-fx-background-color: #404040; -fx-text-fill: white; -fx-font-size: 14px; -fx-padding: 8px 16px; -fx-cursor: hand;" />
+
+            <!-- Timeline View toggle -->
+            <Button fx:id="btnToggleView" text="Timeline View" onAction="#handleToggleView"
+                    styleClass="action-button-timeline">
+               <graphic>
+                   <FontIcon iconLiteral="mdi2c-chart-timeline" iconSize="16" iconColor="white" />
+               </graphic>
+            </Button>
          </children>
-         <VBox.margin>
-            <Insets />
-         </VBox.margin>
       </HBox>
 
-      <!-- Container for both views -->
-      <StackPane fx:id="viewContainer" VBox.vgrow="ALWAYS">
+      <!-- Content Stack (Data Grid / Timeline) -->
+      <StackPane VBox.vgrow="ALWAYS" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308">
          <children>
             <!-- Standard Table View -->
-            <TabPane fx:id="tabPaneProfiles" style="-fx-tab-min-width: 120px; -fx-tab-max-width: 200px;" styleClass="horizontal-tab-pane">
+            <TabPane fx:id="tabPaneProfiles" styleClass="horizontal-tab-pane">
                <!-- Profile tabs will be populated dynamically -->
             </TabPane>
             <!-- Gantt View (loaded dynamically) -->

@@ -10,8 +10,12 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Properties;
 
 import javax.imageio.ImageIO;
 
@@ -53,8 +57,6 @@ public class TelegramBotService implements IBotStateListener {
 
     private static final Logger logger = LoggerFactory.getLogger(TelegramBotService.class);
     private static final String API_BASE = "https://api.telegram.org/bot";
-    /** Long-poll timeout in seconds (Telegram max is 50). */
-    private static final int LONG_POLL_TIMEOUT = 30;
 
     // ── singleton ────────────────────────────────────────────────────────────
     private static TelegramBotService instance;
@@ -67,13 +69,11 @@ public class TelegramBotService implements IBotStateListener {
     }
 
     // ── state ─────────────────────────────────────────────────────────────────
-    private final AtomicBoolean running = new AtomicBoolean(false);
-    private final AtomicLong lastUpdateId = new AtomicLong(-1);
     private volatile boolean botCurrentlyRunning = false;
 
     private String token;
-    private long allowedChatId;
-    private Thread pollingThread;
+    private long   allowedChatId;
+    private WatcherCommandServer commandServer;
 
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -95,14 +95,14 @@ public class TelegramBotService implements IBotStateListener {
     // ── lifecycle ─────────────────────────────────────────────────────────────
 
     /**
-     * Start the Telegram polling service.
+     * Start the local command server that receives forwarded Telegram commands
+     * from the TelegramWatcher process.
      *
-     * @param token         Telegram Bot API token
-     * @param allowedChatId The only Telegram chat-ID that is allowed to issue
-     *                      commands
+     * @param token         Telegram Bot API token (used to send replies)
+     * @param allowedChatId The only Telegram chat-ID that is allowed to issue commands
      */
     public synchronized void start(String token, long allowedChatId) {
-        if (running.get()) {
+        if (commandServer != null) {
             logger.info("TelegramBotService already running – restarting with new credentials");
             stop();
         }
@@ -110,136 +110,61 @@ public class TelegramBotService implements IBotStateListener {
             logger.warn("TelegramBotService: token is blank, not starting");
             return;
         }
-        this.token = token.trim();
+        this.token         = token.trim();
         this.allowedChatId = allowedChatId;
-        running.set(true);
-        lastUpdateId.set(-1);
 
-        pollingThread = Thread.ofVirtual().unstarted(this::pollLoop);
-        pollingThread.setName("telegram-poll");
-        pollingThread.setDaemon(true);
-        pollingThread.start();
+        int port = readLocalPort();
+        commandServer = new WatcherCommandServer(port, this);
+        try {
+            commandServer.start();
+        } catch (IOException e) {
+            logger.error("Failed to start WatcherCommandServer on port {}: {}", port, e.getMessage());
+            commandServer = null;
+            return;
+        }
 
         // Register /commands in Telegram's command menu
         Thread.ofVirtual().start(this::registerBotCommands);
 
-        logger.info("TelegramBotService started (allowed chat-ID: {})", allowedChatId);
+        logger.info("TelegramBotService started (chat-ID: {}, local-port: {})", allowedChatId, port);
     }
 
-    /** Stop the service gracefully. */
+    /** Stop the command server gracefully. */
     public synchronized void stop() {
-        running.set(false);
-        if (pollingThread != null) {
-            pollingThread.interrupt();
-            pollingThread = null;
+        if (commandServer != null) {
+            commandServer.stop();
+            commandServer = null;
         }
         logger.info("TelegramBotService stopped");
     }
 
     public boolean isRunning() {
-        return running.get();
+        return commandServer != null && commandServer.isRunning();
     }
 
-    // ── polling loop ──────────────────────────────────────────────────────────
-
-    private void pollLoop() {
-        while (running.get() && !Thread.currentThread().isInterrupted()) {
-            try {
-                String url = buildGetUpdatesUrl();
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(url))
-                        .timeout(Duration.ofSeconds(LONG_POLL_TIMEOUT + 10))
-                        .GET()
-                        .build();
-
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-                if (response.statusCode() == 200) {
-                    JsonNode root = objectMapper.readTree(response.body());
-                    if (root.path("ok").asBoolean()) {
-                        JsonNode results = root.path("result");
-                        for (JsonNode update : results) {
-                            processUpdate(update);
-                            long uid = update.path("update_id").asLong(-1);
-                            if (uid >= 0) {
-                                lastUpdateId.set(uid);
-                            }
-                        }
-                    }
-                } else {
-                    logger.warn("TelegramBotService: unexpected HTTP status {}", response.statusCode());
-                    Thread.sleep(5_000);
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } catch (Exception e) {
-                if (running.get()) {
-                    logger.error("TelegramBotService poll error: {}", e.getMessage());
-                    try {
-                        Thread.sleep(5_000);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                    }
-                }
+    /** Read localPort from the shared watcher properties file (default 8765). */
+    private static int readLocalPort() {
+        try {
+            Path cfg = Paths.get(System.getProperty("user.home"), ".wosbot", "telegram-watcher.properties");
+            if (Files.exists(cfg)) {
+                Properties props = new Properties();
+                try (FileInputStream fis = new FileInputStream(cfg.toFile())) { props.load(fis); }
+                return Integer.parseInt(props.getProperty("localPort", "8765").trim());
             }
+        } catch (Exception e) {
+            LoggerFactory.getLogger(TelegramBotService.class)
+                    .warn("Could not read localPort from config, defaulting to 8765: {}", e.getMessage());
         }
+        return 8765;
     }
 
-    private String buildGetUpdatesUrl() {
-        long offset = lastUpdateId.get() >= 0 ? lastUpdateId.get() + 1 : 0;
-        // allowed_updates ensures Telegram delivers both 'message' and 'callback_query'
-        // events.
-        // Without this, inline-keyboard button taps are silently dropped by Telegram.
-        return API_BASE + token
-                + "/getUpdates?timeout=" + LONG_POLL_TIMEOUT
-                + (offset > 0 ? "&offset=" + offset : "")
-                + "&allowed_updates=%5B%22message%22%2C%22callback_query%22%5D";
-    }
+    // ── public command dispatch (called by WatcherCommandServer) ─────────────
 
-    // ── command handling ──────────────────────────────────────────────────────
-
-    private void processUpdate(JsonNode update) {
-        // ── callback_query (inline-keyboard button clicks) ───────────────────
-        JsonNode callbackQuery = update.path("callback_query");
-        if (!callbackQuery.isMissingNode()) {
-            String callbackId = callbackQuery.path("id").asText("");
-            long cbChatId = callbackQuery.path("message").path("chat").path("id").asLong(-1);
-            long cbMessageId = callbackQuery.path("message").path("message_id").asLong(-1);
-            String cbData = callbackQuery.path("data").asText("noop");
-            if (cbChatId >= 0) {
-                if (allowedChatId != 0 && cbChatId != allowedChatId) {
-                    final String cid = callbackId;
-                    Thread.ofVirtual().start(() -> answerCallbackQuery(cid, "⛔ Unauthorized"));
-                    return;
-                }
-                final String fid = callbackId;
-                final long fChat = cbChatId;
-                final long fMsg = cbMessageId;
-                final String fData = cbData;
-                Thread.ofVirtual().start(() -> handleCallback(fid, fChat, fMsg, fData));
-            }
-            return;
-        }
-
-        // ── regular message ───────────────────────────────────────────────────
-        JsonNode message = update.path("message");
-        if (message.isMissingNode()) {
-            return; // ignore non-message updates (edited messages, etc.)
-        }
-
-        long chatId = message.path("chat").path("id").asLong(-1);
-        if (chatId < 0)
-            return;
-
-        // Security: ignore any chat that is not the pre-configured one
-        if (allowedChatId != 0 && chatId != allowedChatId) {
-            logger.debug("TelegramBotService: ignored message from unauthorized chat-ID {}", chatId);
-            sendMessage(chatId, "⛔ Unauthorized. Your chat ID: " + chatId);
-            return;
-        }
-
-        String text = message.path("text").asText("").trim().toLowerCase();
-
+    /**
+     * Dispatch a text command forwarded from TelegramWatcher.
+     * The {@code text} parameter is already lower-cased and trimmed.
+     */
+    public void handleTextCommand(long chatId, String text) {
         if (text.startsWith("/start") || text.startsWith("/startbot") || text.contains("start bot")) {
             if (botCurrentlyRunning) {
                 sendMessage(chatId, "⚙️ Bot is already running.");
@@ -259,8 +184,7 @@ public class TelegramBotService implements IBotStateListener {
                 });
             }
         } else if (text.startsWith("/status") || text.contains("status")) {
-            String status = botCurrentlyRunning ? "✅ Bot is *running*." : "🔴 Bot is *stopped*.";
-            sendMessage(chatId, status);
+            sendMessage(chatId, botCurrentlyRunning ? "✅ Bot is *running*." : "🔴 Bot is *stopped*.");
         } else if (text.startsWith("/screenshot") || text.contains("screenshot")) {
             sendMessage(chatId, "📸 Capturing screenshot...");
             Thread.ofVirtual().start(() -> sendScreenshot(chatId));
@@ -275,13 +199,22 @@ public class TelegramBotService implements IBotStateListener {
             Thread.ofVirtual().start(() -> handleProfilesCommand(chatId, -1L));
         } else if (text.startsWith("/reboot") || text.contains("reboot")) {
             Thread.ofVirtual().start(() -> handleRebootCommand(chatId));
-        } else if (text.startsWith("/help") || text.equals("/") || text.contains("help")) {
+        } else if (text.startsWith("/help") || text.contains("help")) {
             sendMessage(chatId, buildHelpMessage());
         } else {
-            sendMessage(chatId,
-                    "❓ Unknown command. Send /help for the list of commands.");
+            logger.debug("TelegramBotService: unrecognised command '{}' from chat {}", text, chatId);
         }
     }
+
+    /**
+     * Dispatch an inline-keyboard callback forwarded from TelegramWatcher.
+     * Runs on a virtual thread so the watcher HTTP response is returned immediately.
+     */
+    public void handleCallbackQuery(String callbackId, long chatId, long messageId, String data) {
+        Thread.ofVirtual().start(() -> handleCallback(callbackId, chatId, messageId, data));
+    }
+
+    // ── (processUpdate removed — commands arrive via WatcherCommandServer) ────
 
     // ── Register commands in Telegram's /commands menu ────────────────────────
 

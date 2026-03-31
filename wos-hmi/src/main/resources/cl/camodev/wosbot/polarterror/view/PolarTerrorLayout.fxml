@@ -7,7 +7,7 @@
     <children>
         <ScrollPane fitToWidth="true" hbarPolicy="NEVER" style="-fx-background-color: transparent; -fx-background: transparent;" vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS">
             <content>
-                <VBox spacing="14" style="-fx-background-color: #1f1f1f; -fx-background-radius: 8; -fx-padding: 18;">
+                <VBox spacing="14" style="-fx-background-color: #11141A; -fx-background-radius: 8; -fx-padding: 18;">
                     <children>
                         <!-- Polar Terror Section -->
                         <VBox spacing="0" style="-fx-background-color: #242424; -fx-background-radius: 8;">

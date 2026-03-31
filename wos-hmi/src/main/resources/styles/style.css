@@ -1,0 +1,1005 @@
+/* =============================================================================
+ * WOS Bot — "Whiteout Survival" Accurate Theme
+ * AtlantaFX PrimerDark Theme Extension
+ * ============================================================================= */
+
+/* ---------------------------------------------------------------------------
+ * ROOT OVERRIDES & DESIGN TOKENS
+ * --------------------------------------------------------------------------- */
+.root {
+    -fx-font-family: "Segoe UI", "Inter", system-ui, sans-serif;
+    -fx-font-size: 13px;
+
+    /* Base Colors */
+    -wos-bg-app: #11141a;
+    /* Requested #1E1E1E */
+    -wos-bg-sidebar: #0c0b17;
+    -wos-bg-card: #181c24; /* Slightly lighter than app bg for elevation */
+    -wos-bg-table-row: #14171f;
+    -wos-bg-table-alt: #1a1e27;
+
+    /* Accents */
+    -wos-yellow: #fcd176;
+    /* Exact Match string FCD176 */
+    -wos-yellow-dark: #bfa529;
+    /* Brown/Dark yellow for the Pause button */
+    -wos-red: #ff271e;
+    /* Requested #FF271E */
+    -wos-blue: #155dfc;
+    /* Requested #155DFC */
+    -wos-teal: #3dc3c3;
+    /* Game Settings header */
+    -wos-purple: #9b2fb8;
+    /* Window Settings header */
+    -wos-green: #59ba59;
+    /* Account header */
+
+    /* Typography */
+    -wos-text-primary: #e6edf3;
+    -wos-text-secondary: #9eaab6;
+    -wos-text-dark: #000000;
+    -wos-info-cyan: #3fcadb;
+    /* Cyan text for INFO logs */
+    -wos-module-blue: #6d99ef;
+    /* Pale blue for Profile/Task text */
+
+    /* Borders & Inputs */
+    -wos-border-subtle: #262a36;
+    -wos-input-bg: #0d0f15;
+
+    -fx-background-color: -wos-bg-app;
+}
+
+/* ---------------------------------------------------------------------------
+ * ELEVATION & BASICS
+ * --------------------------------------------------------------------------- */
+.elevation-0 {
+    -fx-effect: none;
+}
+
+.elevation-1 {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 10, 0, 0, 3);
+}
+
+/* ---------------------------------------------------------------------------
+ * LOGO & SIDEBAR
+ * --------------------------------------------------------------------------- */
+/* Special styling to mimic the "WHITEOUT SURVIVAL" logo */
+#logo-whiteout {
+    -fx-text-fill: white;
+    -fx-font-family: "Impact", "Arial Black", sans-serif;
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-padding: -4 0 -4 0;
+    -fx-effect: dropshadow(gaussian, black, 2, 1, 1, 1);
+}
+
+#logo-survival {
+    -fx-text-fill: -wos-yellow;
+    -fx-font-family: "Impact", "Arial Black", sans-serif;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-padding: -8 0 0 0;
+    -fx-effect: dropshadow(gaussian, black, 2, 1, 1, 1);
+}
+
+.nav-sidebar {
+    -fx-background-color: -wos-bg-sidebar;
+    -fx-border-color: transparent -wos-border-subtle transparent transparent;
+    -fx-border-width: 0 1 0 0;
+    -fx-min-width: 190;
+    -fx-pref-width: 190;
+    -fx-max-width: 190;
+}
+
+.nav-sidebar .scroll-pane {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.nav-sidebar .scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+/* Sidebar Top Area (Logo, Profile, Search) */
+.sidebar-header-area {
+    -fx-padding: 18 16 10 16;
+    -fx-alignment: CENTER;
+    -fx-spacing: 2;
+}
+
+.sidebar-divider {
+    -fx-padding: 0 16;
+}
+
+.sidebar-divider .line {
+    -fx-border-color: -wos-border-subtle;
+    -fx-border-width: 1 0 0 0;
+    -fx-border-style: solid;
+}
+
+/* ---------------------------------------------------------------------------
+ * NAVIGATION ITEM (Pill shape, yellow active)
+ * --------------------------------------------------------------------------- */
+.nav-button-container {
+    -fx-padding: 12 10 12 10;
+}
+
+.nav-button {
+    -fx-background-color: transparent;
+    -fx-border-color: #2a2e38;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-padding: 9 10;
+    -fx-cursor: hand;
+    -fx-text-fill: #b4b9c1;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-alignment: CENTER_LEFT;
+    -fx-max-width: 1.7976931348623157E308;
+    -fx-content-display: LEFT;
+    -fx-graphic-text-gap: 10;
+}
+
+.nav-button .label {
+    -fx-text-fill: #b4b9c1;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.nav-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-border-color: rgba(255, 255, 255, 0.1);
+    -fx-text-fill: white;
+}
+
+.nav-button:hover .label {
+    -fx-text-fill: white;
+}
+
+.nav-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Active Nav State — Solid Yellow, Dark Text */
+.nav-button.active {
+    -fx-background-color: -wos-yellow;
+    -fx-text-fill: #000000; /* Force pure black text */
+    -fx-border-color: -wos-yellow;
+}
+
+.nav-button.active .label {
+    -fx-text-fill: #000000; /* Force pure black text for inner label */
+}
+
+/* Icon colors */
+.nav-button .ikonli-font-icon {
+    -fx-icon-color: #636a75;
+    -fx-icon-size: 14;
+}
+
+.nav-button:hover .ikonli-font-icon {
+    -fx-icon-color: #e6edf3;
+}
+
+.nav-button.active .ikonli-font-icon {
+    -fx-icon-color: #000000; /* Force pure black icon */
+}
+
+/* ---------------------------------------------------------------------------
+ * MAIN BOTTOM STATUS BAR
+ * --------------------------------------------------------------------------- */
+.status-bar {
+    -fx-background-color: -wos-bg-app;
+    -fx-border-color: -wos-border-subtle transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 8 20 8 20;
+    -fx-spacing: 16;
+    -fx-alignment: CENTER_LEFT;
+    -fx-min-height: 48;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 10, 0, 0, -2);
+}
+
+/* Base button defaults */
+.button {
+    -fx-cursor: hand;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+}
+
+/* ---------------------------------------------------------------------------
+ * ACTION BUTTONS — Flat colors matching screenshots
+ * --------------------------------------------------------------------------- */
+.action-button-start {
+    -fx-background-color: -wos-yellow;
+    -fx-text-fill: -wos-text-dark;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-padding: 0 16 0 16;
+    -fx-min-height: 32;
+    -fx-max-height: 32;
+    -fx-pref-height: 32;
+}
+
+.action-button-start:hover {
+    -fx-background-color: #ffe37d;
+}
+
+.action-button-start:pressed {
+    -fx-background-color: #e4be36;
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+}
+
+.action-button-pause {
+    /* Muted brown/yellow as seen in screenshot */
+    -fx-background-color: -wos-yellow-dark;
+    -fx-text-fill: -wos-yellow;
+    /* It seems text is slight light yellow on dark */
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-padding: 0 12 0 12;
+    -fx-min-height: 32;
+    -fx-max-height: 32;
+    -fx-pref-height: 32;
+}
+
+.action-button-pause:hover {
+    -fx-background-color: #bfa529;
+    -fx-text-fill: #11141a;
+}
+
+.action-button-pause:pressed {
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+}
+
+.action-button-pause>.label {
+    -fx-padding: 0 4 0 0;
+}
+
+.action-button-pause>.arrow-button {
+    -fx-padding: 0 8 0 8;
+}
+
+.action-button-pause>.arrow-button .arrow {
+    -fx-background-color: -wos-yellow;
+}
+
+.action-button-pause:hover>.arrow-button .arrow {
+    -fx-background-color: #11141a;
+}
+
+.action-button-logs {
+    -fx-background-color: -wos-blue;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 6 12;
+}
+
+.action-button-logs:hover {
+    -fx-background-color: #3b74eb;
+}
+
+.action-button-clear {
+    -fx-background-color: -wos-red;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 6 12;
+}
+
+.action-button-clear:hover {
+    -fx-background-color: #fb5a5a;
+}
+
+/* ---------------------------------------------------------------------------
+ * COLORED SECTION HEADERS (TitledPanes / VBox GroupHeaders)
+ * --------------------------------------------------------------------------- */
+/* Base class for a header block */
+.section-header {
+    -fx-padding: 10 14;
+    -fx-background-radius: 6 6 0 0;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-text-fill: -wos-text-dark;
+}
+
+.header-yellow {
+    -fx-background-color: -wos-yellow;
+}
+
+.header-cyan {
+    -fx-background-color: -wos-teal;
+}
+
+.header-purple {
+    -fx-background-color: -wos-purple;
+    -fx-text-fill: white;
+}
+
+.header-green {
+    -fx-background-color: -wos-green;
+}
+
+.header-red {
+    -fx-background-color: -wos-red;
+    -fx-text-fill: white;
+}
+
+/* The container holding the header + content underneath has the dark bg */
+.content-card {
+    -fx-background-color: -wos-bg-card;
+    -fx-background-radius: 6;
+    -fx-border-color: -wos-border-subtle;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-padding: 0;
+    /* Padding will exist inside the inner containers */
+}
+
+/* Inner padding for card content, to let header bleed to edge */
+.content-card-inner {
+    -fx-padding: 16;
+}
+
+/* ---------------------------------------------------------------------------
+ * TABLE VIEWS
+ * --------------------------------------------------------------------------- */
+.table-view {
+    -fx-background-color: transparent;
+    -fx-border-color: #262934;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 0;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #ffcd53;
+    -fx-padding: 0;
+}
+
+.table-view .column-header,
+.table-view .filler {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 10 16;
+}
+
+.table-view .column-header .label {
+    -fx-text-fill: #1a1c24;
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+}
+
+/* Alternating dark rows */
+.table-row-cell {
+    -fx-background-color: -wos-bg-table-row;
+    -fx-border-color: transparent;
+}
+
+.table-row-cell:odd {
+    -fx-background-color: -wos-bg-table-alt;
+}
+
+.table-row-cell:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    /* very subtle hover */
+}
+
+.table-row-cell:selected {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+}
+
+.table-cell {
+    -fx-text-fill: -wos-text-primary;
+    -fx-padding: 8 10;
+    -fx-font-size: 12.5px;
+}
+
+.table-row-cell:selected .table-cell {
+    -fx-text-fill: white;
+}
+
+/* Specific cell text coloring based on classes */
+.log-level-info {
+    -fx-text-fill: -wos-info-cyan;
+}
+
+.log-module-text {
+    -fx-text-fill: -wos-module-blue;
+}
+
+.icon-active-yellow {
+    -fx-icon-color: -wos-yellow;
+}
+
+/* ---------------------------------------------------------------------------
+ * TABS (Logs, Profiles, Tasks)
+ * --------------------------------------------------------------------------- */
+.tab-pane>.tab-header-area {
+    -fx-padding: 0;
+}
+
+.tab-pane>.tab-header-area>.tab-header-background {
+    -fx-background-color: -wos-bg-app;
+    -fx-border-color: transparent transparent -wos-border-subtle transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.tab-pane .tab {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 10 24;
+}
+
+.tab-pane .tab:selected {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent -wos-blue transparent;
+    /* Blue underline in tabs */
+    -fx-border-width: 0 0 3 0;
+}
+
+.tab-pane .tab .tab-label {
+    -fx-text-fill: -wos-text-secondary;
+    -fx-font-size: 12.5px;
+}
+
+.tab-pane .tab:selected .tab-label {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.tab-pane > .tab-content-area {
+    -fx-background-color: -wos-bg-app;
+    -fx-padding: 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * INPUT FIELDS, CHECKBOXES & COMBOBOXES
+ * --------------------------------------------------------------------------- */
+.text-field {
+    -fx-background-color: -wos-input-bg;
+    -fx-text-fill: -wos-text-primary;
+    -fx-border-color: -wos-border-subtle;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 8 12;
+    -fx-prompt-text-fill: -wos-text-secondary;
+}
+
+.text-field:focused {
+    -fx-border-color: -wos-yellow;
+}
+
+.search-field {
+    -fx-background-color: #0c0e12;
+    -fx-border-color: #1e2430;
+    -fx-background-radius: 12;
+    /* Rounded search seen in screenshot */
+    -fx-border-radius: 12;
+    -fx-padding: 6 12 6 28;
+}
+
+.search-field:focused {
+    -fx-border-color: -wos-yellow;
+}
+
+.combo-box {
+    -fx-background-color: -wos-input-bg;
+    -fx-border-color: -wos-border-subtle;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+
+.combo-box .list-cell {
+    -fx-text-fill: -wos-text-primary;
+}
+
+.combo-box:hover {
+    -fx-border-color: #3b4255;
+}
+
+.combo-box:focused {
+    -fx-border-color: -wos-yellow;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: -wos-bg-sidebar;
+    -fx-border-color: -wos-border-subtle;
+}
+
+.combo-box-popup .list-cell {
+    -fx-text-fill: -wos-text-primary;
+    -fx-background-color: transparent;
+}
+
+.combo-box-popup .list-cell:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+}
+
+.combo-box-popup .list-cell:selected {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-text-fill: white;
+}
+
+/* Checkbox (Gold square outline to match) */
+.check-box {
+    -fx-text-fill: -wos-text-secondary;
+    -fx-cursor: hand;
+}
+
+.check-box .box {
+    -fx-background-color: transparent;
+    -fx-border-color: #7b8393;
+    -fx-border-radius: 4;
+    -fx-border-width: 1.5;
+    -fx-background-radius: 4;
+    -fx-padding: 3;
+}
+
+.check-box:selected .box {
+    -fx-background-color: -wos-yellow;
+    -fx-border-color: -wos-yellow;
+}
+
+.check-box .mark {
+    -fx-background-color: transparent;
+}
+
+.check-box:selected .mark {
+    -fx-background-color: -wos-text-dark;
+}
+
+/* ---------------------------------------------------------------------------
+ * SCROLLBARS (Thin, extremely dark)
+ * --------------------------------------------------------------------------- */
+.scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .track {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: #3D3C45; /* Clean tab/sidebar thumb color */
+    -fx-background-radius: 8;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: #4b4a55;
+}
+
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.scroll-bar .increment-arrow,
+.scroll-bar .decrement-arrow {
+    -fx-shape: "";
+    -fx-padding: 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * TYPOGRAPHY
+ * --------------------------------------------------------------------------- */
+.label {
+    -fx-text-fill: -wos-text-primary;
+}
+
+.label-muted {
+    -fx-text-fill: -wos-text-secondary;
+    -fx-font-size: 11px;
+}
+
+/* Status Indicators */
+.status-running {
+    -fx-text-fill: -wos-yellow;
+    -fx-font-weight: bold;
+}
+
+.status-stopped {
+    -fx-text-fill: -wos-red;
+    -fx-font-weight: bold;
+}
+
+/* ---------------------------------------------------------------------------
+ * CUSTOM CARDS AND HEADERS FOR TASK PAGES
+ * --------------------------------------------------------------------------- */
+.content-card {
+    -fx-background-color: -wos-bg-card;
+    -fx-background-radius: 6;
+    -fx-border-color: #2a2e38;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+}
+
+.header-yellow {
+    -fx-background-color: -wos-yellow;
+    -fx-background-radius: 5 5 0 0;
+    -fx-padding: 8 16;
+}
+
+.header-red {
+    -fx-background-color: -wos-red;
+    -fx-background-radius: 5 5 0 0;
+    -fx-padding: 8 16;
+}
+
+/* ---------------------------------------------------------------------------
+ * QUICK NAV OVERLAY (Windows 10 Start Menu Style)
+ * --------------------------------------------------------------------------- */
+.quick-nav-overlay {
+    -fx-background-color: #0c0e14E6; /* Slightly more transparent to show blur cleanly */
+    -fx-background: transparent;
+}
+
+.quick-nav-overlay .viewport {
+    -fx-background-color: transparent;
+}
+
+.quick-nav-overlay .scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.quick-nav-card {
+    -fx-background-color: #1a1e27;
+    -fx-border-color: #262a36;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 6, 0, 0, 2);
+    -fx-transition: -fx-background-color 0.2s, -fx-border-color 0.2s;
+}
+
+.quick-nav-card:hover {
+    -fx-background-color: #212632;
+    -fx-border-color: #434c60;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 10, 0, 0, 4);
+    /* Removed scaling and yellow glow for a cleaner, professional feel */
+}
+
+.quick-nav-card-icon {
+    -fx-icon-color: #a0a6b2;
+    -fx-icon-size: 24;
+}
+
+.quick-nav-card:hover .quick-nav-card-icon {
+    -fx-icon-color: #fcd176;
+}
+
+.quick-nav-card-label {
+    -fx-text-fill: #e6edf3;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-alignment: CENTER_LEFT;
+}
+
+.quick-nav-card:hover .quick-nav-card-label {
+    -fx-text-fill: #ffffff;
+}
+
+/* ---------------------------------------------------------------------------
+ * SEARCH RESULTS OVERLAY
+ * --------------------------------------------------------------------------- */
+.search-results-pane .viewport {
+    -fx-background-color: #11141a;
+}
+
+.search-results-pane .scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.search-result-group {
+    -fx-border-color: #11141a;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-background-color: #1e1f26;
+    /* Dark background for body/rows */
+}
+
+.search-group-header {
+    -fx-background-color: #2e303d;
+    -fx-background-radius: 8 8 0 0;
+}
+
+.search-go-button:hover {
+    -fx-background-color: #4875fa;
+}
+
+/* ---------------------------------------------------------------------------
+ * SOCIAL ICONS
+ * --------------------------------------------------------------------------- */
+.social-icon {
+    -fx-opacity: 0.8;
+}
+
+.social-icon:hover {
+    -fx-opacity: 1.0;
+    -fx-icon-color: #388bfd;
+}
+
+.search-group-header:hover {
+    -fx-background-color: #383b4c;
+}
+
+.search-group-header .ikonli-font-icon {
+    -fx-icon-color: #636a75;
+}
+
+.search-group-header:hover .ikonli-font-icon {
+    -fx-icon-color: #fcd176;
+}
+
+.search-result-row {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0 0 8 8;
+}
+
+.search-result-row:hover {
+    -fx-background-color: #262934;
+    /* subtle hover */
+}
+
+/* ---------------------------------------------------------------------------
+ * CONTROL TAB — Shared Search/Filter Bar Styles
+ * --------------------------------------------------------------------------- */
+
+/* Top bar shared across Logs, Profiles, Tasks tabs */
+.control-top-bar {
+    -fx-background-color: -wos-bg-card;
+    -fx-border-color: -wos-border-subtle;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 6 12;
+    -fx-alignment: CENTER_LEFT;
+    -fx-spacing: 12;
+    -fx-min-height: 44;
+    -fx-max-height: 44;
+}
+
+/* Bottom bar shared across Logs, Profiles, Tasks tabs */
+.control-bottom-bar {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-alignment: CENTER_LEFT;
+    -fx-spacing: 8;
+    -fx-min-height: 40;
+}
+
+/* Wrapper that groups search field + clear-X button side by side */
+.log-search-wrapper {
+    -fx-background-color: #12141a;
+    -fx-border-color: #262934;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-border-width: 1;
+    -fx-padding: 0 4 0 12;
+    -fx-max-width: 420;
+    -fx-min-width: 250;
+}
+
+.log-search-wrapper:focused-within {
+    -fx-border-color: #388bfd;
+}
+
+/* Search text field inside the wrapper — no own border */
+.control-search-field {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: -wos-text-primary;
+    -fx-prompt-text-fill: -wos-text-secondary;
+    -fx-padding: 8 8 8 8;
+    -fx-background-radius: 6 0 0 6;
+    -fx-border-radius: 0;
+}
+
+.control-search-field:focused {
+    -fx-border-color: transparent;
+}
+
+/* ✕ clear button inside the search wrapper */
+.search-clear-btn {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: -wos-text-secondary;
+    -fx-font-size: 11px;
+    -fx-padding: 4 10;
+    -fx-cursor: hand;
+    -fx-background-radius: 0 6 6 0;
+    -fx-border-radius: 0;
+}
+
+.search-clear-btn:hover {
+    -fx-text-fill: -wos-text-primary;
+    -fx-background-color: rgba(255,255,255,0.06);
+}
+
+/* Filter/sort combo boxes in control bars */
+.control-filter-combo {
+    -fx-background-color: #0c0e12;
+    -fx-border-color: #1e2430;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-border-width: 1;
+    -fx-text-fill: -wos-text-primary;
+    -fx-cursor: hand;
+    -fx-padding: 4 8;
+}
+
+.control-filter-combo:focused {
+    -fx-border-color: -wos-yellow;
+}
+
+.control-filter-combo .list-cell {
+    -fx-text-fill: -wos-text-primary;
+    -fx-font-size: 12px;
+}
+
+.control-filter-combo .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.control-filter-combo .arrow {
+    -fx-background-color: -wos-text-secondary;
+}
+
+/* Gear button for column visibility */
+.column-settings-btn {
+    -fx-background-color: transparent;
+    -fx-border-color: #1e2430;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-border-width: 1;
+    -fx-padding: 6 8;
+    -fx-cursor: hand;
+    -fx-min-width: 34;
+    -fx-min-height: 34;
+}
+
+.column-settings-btn:hover {
+    -fx-border-color: #3b4255;
+    -fx-background-color: rgba(255,255,255,0.04);
+}
+
+.column-settings-btn:hover .ikonli-font-icon {
+    -fx-icon-color: -wos-yellow;
+}
+
+/* Timeline / Table View toggle button — blue matching Target */
+.action-button-timeline {
+    -fx-background-color: #388bfd;
+    -fx-background-radius: 6;
+    -fx-border-width: 0;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-padding: 6 12;
+    -fx-cursor: hand;
+}
+
+.action-button-timeline:hover {
+    -fx-background-color: #4893fb;
+}
+
+.action-button-timeline:pressed {
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+}
+
+/* Bulk Update button */
+.action-button-bulk {
+    -fx-background-color: #388bfd;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-padding: 6 12;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.action-button-bulk:hover {
+    -fx-background-color: #58a6ff;
+}
+
+/* Add Profile button */
+.action-button-add-profile {
+    -fx-background-color: #f3c467;
+    -fx-text-fill: #0c0e12;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-padding: 6 12;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.action-button-add-profile:hover {
+    -fx-background-color: #ffce54;
+}
+
+/* Horizontal tab pane inside tasks - no top padding since bar is already there */
+.horizontal-tab-pane > .tab-header-area {
+    -fx-padding: 0 0 0 16;
+}
+
+.horizontal-tab-pane > .tab-content-area {
+    -fx-padding: 0;
+}
+
+/* Icon-only action buttons for table rows */
+.action-icon-button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 4;
+    -fx-cursor: hand;
+}
+
+.action-icon-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 4;
+}
+
+.action-icon-button:pressed {
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* ---------------------------------------------------------------------------
+ * CUSTOM TITLE BAR
+ * --------------------------------------------------------------------------- */
+.custom-title-bar {
+    -fx-background-color: #1E1E1E;
+    -fx-padding: 0;
+}
+
+.title-bar-text {
+    -fx-text-fill: #e6edf3;
+    -fx-font-size: 13px;
+    -fx-font-family: "Segoe UI", sans-serif;
+    -fx-font-weight: normal;
+}
+
+.title-bar-controls {
+    -fx-alignment: CENTER_RIGHT;
+}
+
+.title-bar-btn {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: #e6edf3;
+    -fx-font-size: 13px;
+    -fx-padding: 0;
+    -fx-min-width: 46;
+    -fx-max-width: 46;
+    -fx-min-height: 32;
+    -fx-max-height: 32;
+    -fx-cursor: default;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+}
+
+.title-bar-btn:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+}
+
+.title-bar-btn:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Close button hover state is red */
+.title-bar-close:hover {
+    -fx-background-color: #e81123;
+    -fx-text-fill: white;
+}
+
+.title-bar-close:pressed {
+    -fx-background-color: #f1707a;
+}
