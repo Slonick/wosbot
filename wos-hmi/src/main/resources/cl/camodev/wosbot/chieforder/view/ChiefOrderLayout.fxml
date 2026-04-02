@@ -1,41 +1,53 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
-<?import javafx.scene.control.CheckBox?>
-<?import javafx.scene.layout.ColumnConstraints?>
-<?import javafx.scene.layout.GridPane?>
-<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 
-<GridPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="306.0" prefWidth="580.0"
-          xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1">
-    <columnConstraints>
-        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="60.0" prefWidth="200.0"/>
-    </columnConstraints>
-    <rowConstraints>
-        <RowConstraints maxHeight="1.7976931348623157E308" minHeight="10.0" percentHeight="25.0" prefHeight="277.0"
-                        vgrow="SOMETIMES"/>
-        <RowConstraints maxHeight="1.7976931348623157E308" minHeight="10.0" percentHeight="25.0" prefHeight="277.0"
-                        vgrow="SOMETIMES"/>
-        <RowConstraints maxHeight="1.7976931348623157E308" minHeight="10.0" percentHeight="25.0" prefHeight="277.0"
-                        vgrow="SOMETIMES"/>
-    </rowConstraints>
+<VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="550.0"
+      HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS"
+      xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1">
     <children>
-        <CheckBox fx:id="checkBoxRushJob" graphicTextGap="3.0" mnemonicParsing="false" text="Rush Job (every 24h)">
-            <GridPane.margin>
-                <Insets left="10.0" top="5.0"/>
-            </GridPane.margin>
-        </CheckBox>
-        <CheckBox fx:id="checkBoxUrgentMobilisation" graphicTextGap="3.0" mnemonicParsing="false"
-                  text="Urgent Mobilisation (every 8h)" GridPane.rowIndex="1">
-            <GridPane.margin>
-                <Insets left="10.0" top="5.0"/>
-            </GridPane.margin>
-        </CheckBox>
-        <CheckBox fx:id="checkBoxProductivityDay" graphicTextGap="3.0" mnemonicParsing="false"
-                  text="Productivity Day (every 12h)" GridPane.rowIndex="2">
-            <GridPane.margin>
-                <Insets left="10.0" top="5.0"/>
-            </GridPane.margin>
-        </CheckBox>
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="task-page-scroll"
+                    vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS">
+            <content>
+                <VBox styleClass="task-page-root" maxHeight="1.7976931348623157E308"
+                      maxWidth="1.7976931348623157E308">
+                    <children>
+
+                        <!-- Chief Orders Card -->
+                        <VBox styleClass="content-card">
+                            <children>
+                                <HBox alignment="CENTER_LEFT" maxWidth="1.7976931348623157E308"
+                                      styleClass="header-yellow">
+                                    <children>
+                                        <Label text="Chief Orders" />
+                                    </children>
+                                </HBox>
+                                <VBox styleClass="task-section-inner">
+                                    <children>
+                                        <Label styleClass="task-card-description"
+                                               text="Configure which chief orders to automatically complete" wrapText="true" />
+
+                                        <Separator style="-fx-opacity: 0.25;" />
+
+                                        <VBox styleClass="task-subsection" spacing="14">
+                                            <children>
+                                                <CheckBox fx:id="checkBoxRushJob" mnemonicParsing="false"
+                                                          graphicTextGap="3.0" text="Rush Job (every 24h)" />
+                                                <CheckBox fx:id="checkBoxUrgentMobilisation" mnemonicParsing="false"
+                                                          graphicTextGap="3.0" text="Urgent Mobilisation (every 8h)" />
+                                                <CheckBox fx:id="checkBoxProductivityDay" mnemonicParsing="false"
+                                                          graphicTextGap="3.0" text="Productivity Day (every 12h)" />
+                                            </children>
+                                        </VBox>
+                                    </children>
+                                </VBox>
+                            </children>
+                        </VBox>
+
+                    </children>
+                </VBox>
+            </content>
+        </ScrollPane>
     </children>
-</GridPane>
+</VBox>

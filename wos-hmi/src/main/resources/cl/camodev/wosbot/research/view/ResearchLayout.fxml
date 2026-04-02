@@ -3,35 +3,48 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="550.0" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1">
+<VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="550.0"
+      HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS"
+      xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1">
     <children>
-        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" style="-fx-background-color: transparent; -fx-background: transparent;" vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS">
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="task-page-scroll"
+                    vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS">
             <content>
-                <VBox spacing="14" style="-fx-background-color: #11141A; -fx-background-radius: 8; -fx-padding: 18;">
+                <VBox styleClass="task-page-root" maxHeight="1.7976931348623157E308"
+                      maxWidth="1.7976931348623157E308">
                     <children>
-                        <!-- Research Section -->
-                        <VBox spacing="0" style="-fx-background-color: #242424; -fx-background-radius: 8;">
+
+                        <!-- Research Card -->
+                        <VBox styleClass="content-card">
                             <children>
-                                <HBox alignment="CENTER_LEFT" maxWidth="1.7976931348623157E308" style="-fx-background-color: linear-gradient(#5cad5c, #2e6b2e); -fx-background-radius: 8 8 0 0; -fx-padding: 8 12;">
+                                <HBox alignment="CENTER_LEFT" maxWidth="1.7976931348623157E308"
+                                      styleClass="header-green">
                                     <children>
-                                        <CheckBox fx:id="checkBoxEnableResearch" mnemonicParsing="false" style="-fx-font-weight: bold; -fx-text-fill: #1c1c1c;" text="Enable Research" />
+                                        <Label text="Enable Research" />
                                         <Region HBox.hgrow="ALWAYS" />
                                     </children>
                                 </HBox>
-                                <VBox spacing="8" style="-fx-padding: 12;">
+                                <VBox styleClass="task-section-inner">
                                     <children>
-                                        <Label style="-fx-font-size: 10px; -fx-text-fill: #b5b5b5;" text="Automates research technology in your city" wrapText="true" />
-                                        <HBox spacing="10">
+                                        <Label styleClass="task-card-description"
+                                               text="Automates research technology in your city" wrapText="true" />
+                                        <Separator style="-fx-opacity: 0.25;" />
+                                        <CheckBox fx:id="checkBoxEnableResearch" mnemonicParsing="false" text="Enable Research" />
+
+                                        <Separator style="-fx-opacity: 0.25;" />
+
+                                        <HBox spacing="16">
                                             <children>
-                                                <CheckBox fx:id="checkBoxGrowth" mnemonicParsing="false" style="-fx-text-fill: #b5b5b5;" text="Growth" />
-                                                <CheckBox fx:id="checkBoxEconomy" mnemonicParsing="false" style="-fx-text-fill: #b5b5b5;" text="Economy" />
-                                                <CheckBox fx:id="checkBoxBattle" mnemonicParsing="false" style="-fx-text-fill: #b5b5b5;" text="Battle" />
+                                                <CheckBox fx:id="checkBoxGrowth" mnemonicParsing="false" text="Growth" />
+                                                <CheckBox fx:id="checkBoxEconomy" mnemonicParsing="false" text="Economy" />
+                                                <CheckBox fx:id="checkBoxBattle" mnemonicParsing="false" text="Battle" />
                                             </children>
                                         </HBox>
                                     </children>
                                 </VBox>
                             </children>
                         </VBox>
+
                     </children>
                 </VBox>
             </content>

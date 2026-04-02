@@ -1,36 +1,58 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
-<?import javafx.scene.control.CheckBox?>
-<?import javafx.scene.control.ComboBox?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.VBox?>
-<?import javafx.scene.text.Font?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 
-<VBox alignment="TOP_CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" spacing="20.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1">
-   <children>
-      <Label text="Beast Hunting">
-         <font>
-            <Font name="System Bold" size="24.0" />
-         </font>
-      </Label>
-      <Label text="Automatically hunts beasts on the world map using available stamina and march queues." />
-      <CheckBox fx:id="checkBoxEnableBeastHunting" mnemonicParsing="false" text="Enable Beast Hunting" />
-      <HBox alignment="CENTER_LEFT" spacing="10.0">
-         <children>
-            <Label text="Active Marches:" />
-            <ComboBox fx:id="comboBoxBeastHuntingMarches" />
-         </children>
-      </HBox>
-      <HBox alignment="CENTER_LEFT" spacing="10.0">
-         <children>
-            <Label text="Beast Level:" />
-            <ComboBox fx:id="comboBoxBeastHuntingLevel" />
-         </children>
-      </HBox>
-   </children>
-   <padding>
-      <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
-   </padding>
+<VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="550.0"
+      HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS"
+      xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1">
+    <children>
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="task-page-scroll"
+                    vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS">
+            <content>
+                <VBox styleClass="task-page-root" maxHeight="1.7976931348623157E308"
+                      maxWidth="1.7976931348623157E308">
+                    <children>
+
+                        <!-- Beast Hunting Card -->
+                        <VBox styleClass="content-card">
+                            <children>
+                                <HBox alignment="CENTER_LEFT" maxWidth="1.7976931348623157E308"
+                                      styleClass="header-red">
+                                    <children>
+                                        <CheckBox fx:id="checkBoxEnableBeastHunting" mnemonicParsing="false"
+                                                  style="-fx-font-weight: bold;" text="Enable Beast Hunting" />
+                                    </children>
+                                </HBox>
+                                <VBox styleClass="task-section-inner">
+                                    <children>
+                                        <Label styleClass="task-card-description"
+                                               text="Automatically hunts beasts on the world map using available stamina and march queues."
+                                               wrapText="true" />
+
+                                        <Separator style="-fx-opacity: 0.25;" />
+
+                                        <HBox alignment="CENTER_LEFT" spacing="16">
+                                            <children>
+                                                <Label styleClass="task-field-label" text="Active Marches:" />
+                                                <ComboBox fx:id="comboBoxBeastHuntingMarches" />
+                                            </children>
+                                        </HBox>
+
+                                        <HBox alignment="CENTER_LEFT" spacing="16">
+                                            <children>
+                                                <Label styleClass="task-field-label" text="Beast Level:" />
+                                                <ComboBox fx:id="comboBoxBeastHuntingLevel" />
+                                            </children>
+                                        </HBox>
+                                    </children>
+                                </VBox>
+                            </children>
+                        </VBox>
+
+                    </children>
+                </VBox>
+            </content>
+        </ScrollPane>
+    </children>
 </VBox>

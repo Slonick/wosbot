@@ -2,60 +2,80 @@
 
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.geometry.Insets?>
 
-<VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308"
-      prefHeight="550.0" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS"
+<VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="550.0"
+      HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS"
       xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1">
     <children>
-        <ScrollPane fitToWidth="true" fitToHeight="true" hbarPolicy="NEVER"
-                    vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS"
-                    maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308">
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="task-page-scroll"
+                    vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS">
             <content>
-                <VBox spacing="14" style="-fx-padding: 18;"
-                      maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" VBox.vgrow="ALWAYS">
+                <VBox styleClass="task-page-root" maxHeight="1.7976931348623157E308"
+                      maxWidth="1.7976931348623157E308">
                     <children>
-                        <!-- Top Controls: Refresh & Reset -->
-                        <HBox alignment="CENTER_RIGHT" spacing="15">
+
+                        <!-- Statistics Controls -->
+                        <HBox alignment="CENTER_RIGHT" spacing="12">
                             <children>
                                 <Button fx:id="btnRefresh" mnemonicParsing="false"
-                                        onAction="#handleRefresh" text="Refresh" />
+                                        onAction="#handleRefresh" styleClass="action-button-timeline" text="Refresh" />
                                 <Button fx:id="btnReset" mnemonicParsing="false"
-                                        onAction="#handleReset" text="Reset Statistics"
-                                        style="-fx-text-fill: #f85149;" />
+                                        onAction="#handleReset" styleClass="action-button-clear" text="Reset Statistics" />
                             </children>
                         </HBox>
 
-                        <Separator style="-fx-opacity: 0.3;" />
+                        <Separator style="-fx-opacity: 0.25;" />
 
                         <!-- Summary Cards Row -->
                         <HBox fx:id="hboxSummaryCards" spacing="15" alignment="CENTER" />
 
-                        <Separator style="-fx-opacity: 0.3;" />
+                        <Separator style="-fx-opacity: 0.25;" />
 
-                        <Label text="Task Execution Statistics" styleClass="section-title" />
-                        <TableView fx:id="tableTasks" minHeight="300.0" prefHeight="450.0" VBox.vgrow="ALWAYS">
-                            <columns>
-                                <TableColumn fx:id="colTaskName" prefWidth="200.0" text="Task Name" />
-                                <TableColumn fx:id="colRuns" prefWidth="80.0" text="Runs" />
-                                <TableColumn fx:id="colAvgTime" prefWidth="120.0" text="Avg Time (s)" />
-                                <TableColumn fx:id="colTotalTime" prefWidth="120.0" text="Total Time (s)" />
-                                <TableColumn fx:id="colAvgOcr" prefWidth="100.0" text="Avg OCR Fail" />
-                                <TableColumn fx:id="colAvgImg" prefWidth="100.0" text="Avg Img Fail" />
-                                <TableColumn fx:id="colLastRun" prefWidth="150.0" text="Last Run" />
-                            </columns>
-                        </TableView>
+                        <!-- Task Statistics Card -->
+                        <VBox styleClass="content-card" VBox.vgrow="ALWAYS">
+                            <children>
+                                <HBox maxWidth="1.7976931348623157E308" styleClass="header-yellow">
+                                    <children>
+                                        <Label text="Task Execution Statistics" />
+                                    </children>
+                                </HBox>
+                                <VBox style="-fx-padding: 0;">
+                                    <children>
+                                        <TableView fx:id="tableTasks" minHeight="300.0" prefHeight="450.0" VBox.vgrow="ALWAYS">
+                                            <columns>
+                                                <TableColumn fx:id="colTaskName" prefWidth="200.0" text="Task Name" />
+                                                <TableColumn fx:id="colRuns" prefWidth="80.0" text="Runs" />
+                                                <TableColumn fx:id="colAvgTime" prefWidth="120.0" text="Avg Time (s)" />
+                                                <TableColumn fx:id="colTotalTime" prefWidth="120.0" text="Total Time (s)" />
+                                                <TableColumn fx:id="colAvgOcr" prefWidth="100.0" text="Avg OCR Fail" />
+                                                <TableColumn fx:id="colAvgImg" prefWidth="100.0" text="Avg Img Fail" />
+                                                <TableColumn fx:id="colLastRun" prefWidth="150.0" text="Last Run" />
+                                            </columns>
+                                        </TableView>
+                                    </children>
+                                </VBox>
+                            </children>
+                        </VBox>
 
-                        <Separator style="-fx-opacity: 0.3;" />
+                        <Separator style="-fx-opacity: 0.25;" />
 
-                        <Label text="Activity Counters" styleClass="section-title" />
-
-                        <!-- Dynamic grouped counter sections will be added here -->
-                        <VBox fx:id="vboxCounterSections" spacing="10" />
-
-                        <!-- Empty State message -->
-                        <Label fx:id="lblNoData" styleClass="label-muted"
-                               text="No statistics recorded yet..." visible="false" managed="false" />
+                        <!-- Activity Counters Card -->
+                        <VBox styleClass="content-card">
+                            <children>
+                                <HBox maxWidth="1.7976931348623157E308" styleClass="header-blue">
+                                    <children>
+                                        <Label text="Activity Counters" />
+                                    </children>
+                                </HBox>
+                                <VBox styleClass="task-section-inner">
+                                    <children>
+                                        <VBox fx:id="vboxCounterSections" spacing="10" />
+                                        <Label fx:id="lblNoData" styleClass="label-muted"
+                                               text="No statistics recorded yet..." visible="false" managed="false" />
+                                    </children>
+                                </VBox>
+                            </children>
+                        </VBox>
 
                     </children>
                 </VBox>

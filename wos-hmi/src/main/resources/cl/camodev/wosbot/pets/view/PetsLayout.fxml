@@ -1,46 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
-<?import javafx.scene.control.CheckBox?>
-<?import javafx.scene.control.ComboBox?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ScrollPane?>
-<?import javafx.scene.control.Separator?>
-<?import javafx.scene.layout.ColumnConstraints?>
-<?import javafx.scene.layout.GridPane?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.RowConstraints?>
-<?import javafx.scene.layout.VBox?>
-<?import javafx.scene.text.Font?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 
-<VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="550.0" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS" xmlns="http://javafx.com/javafx/24.0.1" xmlns:fx="http://javafx.com/fxml/1">
+<VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="550.0"
+      HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS"
+      xmlns="http://javafx.com/javafx/24.0.1" xmlns:fx="http://javafx.com/fxml/1">
     <children>
-        <ScrollPane fitToHeight="true" fitToWidth="true" hbarPolicy="NEVER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" style="-fx-background-color: transparent; -fx-background: transparent;" vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS">
+        <ScrollPane fitToHeight="true" fitToWidth="true" hbarPolicy="NEVER"
+                    maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308"
+                    styleClass="task-page-scroll" vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS">
             <content>
-                <VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" spacing="14" style="-fx-background-color: #11141A; -fx-background-radius: 8; -fx-padding: 18;" VBox.vgrow="ALWAYS">
+                <VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308"
+                      styleClass="task-page-root" VBox.vgrow="ALWAYS">
                     <children>
-                        <!-- Pets Section -->
-                        <VBox maxHeight="1.7976931348623157E308" spacing="0" style="-fx-background-color: #242424; -fx-background-radius: 8;" VBox.vgrow="ALWAYS">
+
+                        <!-- Pet Management Card -->
+                        <VBox maxHeight="1.7976931348623157E308" styleClass="content-card" VBox.vgrow="ALWAYS">
                             <children>
-                                <HBox alignment="CENTER_LEFT" maxWidth="1.7976931348623157E308" style="-fx-background-color: linear-gradient(#4dd0e1, #0097a7); -fx-background-radius: 8 8 0 0; -fx-padding: 8 12;">
+                                <HBox alignment="CENTER_LEFT" maxWidth="1.7976931348623157E308"
+                                      styleClass="header-teal">
                                     <children>
-                                        <Label style="-fx-font-weight: bold; -fx-text-fill: #1c1c1c;" text="Pet Management" />
+                                        <Label text="Pet Management" />
                                     </children>
                                 </HBox>
-                                <VBox maxHeight="1.7976931348623157E308" spacing="10" style="-fx-padding: 12;" VBox.vgrow="ALWAYS">
+                                <VBox maxHeight="1.7976931348623157E308" styleClass="task-section-inner" VBox.vgrow="ALWAYS">
                                     <children>
-                                        <Label style="-fx-font-size: 10px; -fx-text-fill: #b5b5b5;" text="Automates pet-related tasks and skill activation" wrapText="true" />
+                                        <Label styleClass="task-card-description"
+                                               text="Automates pet-related tasks and skill activation" wrapText="true" />
+                                        <Separator style="-fx-opacity: 0.25;" />
 
-                                        <Separator style="-fx-opacity: 0.3; -fx-padding: 4 0;" />
-
-                                        <!-- Main Configuration Area - uses all available space -->
                                         <VBox maxHeight="1.7976931348623157E308" spacing="15" VBox.vgrow="ALWAYS">
                                             <children>
-                                                <!-- Treasures Section -->
-                                                <VBox spacing="10" style="-fx-background-color: #2a2a2a; -fx-background-radius: 4; -fx-padding: 10;">
+                                                <!-- Pet Treasures Sub-section -->
+                                                <VBox styleClass="task-subsection">
                                                     <children>
-                                                        <Label style="-fx-text-fill: #e5e5e5; -fx-font-weight: bold;" text="Pet Treasures" />
-
+                                                        <Label styleClass="task-subsection-title" text="Pet Treasures" />
                                                         <GridPane hgap="20" vgap="10">
                                                             <columnConstraints>
                                                                 <ColumnConstraints percentWidth="50" />
@@ -50,31 +45,23 @@
                                                                 <RowConstraints />
                                                             </rowConstraints>
                                                             <children>
-                                                                <CheckBox fx:id="checkBoxPetAllianceTreasure" mnemonicParsing="false" style="-fx-text-fill: #e5e5e5;" text="Alliance Treasures" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-                                                                <CheckBox fx:id="checkBoxPetPersonalTreasure" mnemonicParsing="false" style="-fx-text-fill: #e5e5e5;" text="Personal Treasures" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                                                                <CheckBox fx:id="checkBoxPetAllianceTreasure" mnemonicParsing="false" text="Alliance Treasures" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                                                                <CheckBox fx:id="checkBoxPetPersonalTreasure" mnemonicParsing="false" text="Personal Treasures" GridPane.columnIndex="1" GridPane.rowIndex="0" />
                                                             </children>
                                                         </GridPane>
                                                     </children>
                                                 </VBox>
 
-                                                <!-- Pet Skills Section -->
-                                                <VBox spacing="10" style="-fx-background-color: #2a2a2a; -fx-background-radius: 4; -fx-padding: 10;">
+                                                <!-- Pet Skills Sub-section -->
+                                                <VBox styleClass="task-subsection" VBox.vgrow="ALWAYS" maxHeight="1.7976931348623157E308">
                                                     <children>
-                                          <HBox alignment="CENTER_LEFT" maxWidth="1.7976931348623157E308">
-                                             <children>
-                                                <CheckBox fx:id="checkBoxPetSkills" mnemonicParsing="false" text="Activate Pet Skills">
-                                                   <font>
-                                                      <Font name="System Bold" size="12.0" />
-                                                   </font>
-                                                </CheckBox>
-                                             </children>
-                                          </HBox>
+                                                        <CheckBox fx:id="checkBoxPetSkills" mnemonicParsing="false"
+                                                                  style="-fx-font-weight: bold;" text="Activate Pet Skills" />
 
                                                         <GridPane alignment="CENTER_LEFT" hgap="20" vgap="10">
                                                             <columnConstraints>
                                                                 <ColumnConstraints percentWidth="50.0" />
                                                                 <ColumnConstraints percentWidth="50.0" />
-                                                <ColumnConstraints />
                                                             </columnConstraints>
                                                             <rowConstraints>
                                                                 <RowConstraints />
@@ -82,17 +69,15 @@
                                                                 <RowConstraints />
                                                             </rowConstraints>
                                                             <children>
-                                                                <CheckBox fx:id="checkboxStaminaSkill" mnemonicParsing="false" style="-fx-text-fill: #e5e5e5;" text="Use Stamina Skill" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-                                                                <CheckBox fx:id="checkboxFoodSkill" mnemonicParsing="false" style="-fx-text-fill: #e5e5e5;" text="Use Food Skill" GridPane.columnIndex="1" GridPane.rowIndex="0" />
-                                                                <CheckBox fx:id="checkboxTreasureSkill" mnemonicParsing="false" style="-fx-text-fill: #e5e5e5;" text="Use Treasure Skill" GridPane.columnIndex="0" GridPane.rowIndex="1" />
-                                                                <CheckBox fx:id="checkboxGatheringSkill" mnemonicParsing="false" style="-fx-text-fill: #e5e5e5;" text="Use Gathering Skill" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                                                                <VBox alignment="CENTER_LEFT" fillWidth="false" spacing="5" GridPane.columnIndex="1" GridPane.columnSpan="2" GridPane.rowIndex="2">
+                                                                <CheckBox fx:id="checkboxStaminaSkill" mnemonicParsing="false" text="Use Stamina Skill" GridPane.columnIndex="0" GridPane.rowIndex="0" />
+                                                                <CheckBox fx:id="checkboxFoodSkill" mnemonicParsing="false" text="Use Food Skill" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                                                                <CheckBox fx:id="checkboxTreasureSkill" mnemonicParsing="false" text="Use Treasure Skill" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+                                                                <CheckBox fx:id="checkboxGatheringSkill" mnemonicParsing="false" text="Use Gathering Skill" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                                                <VBox alignment="CENTER_LEFT" fillWidth="false" spacing="5"
+                                                                      GridPane.columnIndex="0" GridPane.rowIndex="2">
                                                                     <children>
-                                                                        <Label style="-fx-text-fill: #b5b5b5; -fx-font-size: 10px;" text="Gathering Resource:" />
-                                                                        <ComboBox fx:id="comboBoxGatheringResource" prefHeight="24.0" prefWidth="90.0" style="-fx-font-size: 11px;">
-                                                         <VBox.margin>
-                                                            <Insets left="10.0" />
-                                                         </VBox.margin></ComboBox>
+                                                                        <Label styleClass="task-field-label" text="Gathering Resource:" />
+                                                                        <ComboBox fx:id="comboBoxGatheringResource" prefHeight="24.0" prefWidth="120.0" />
                                                                     </children>
                                                                 </VBox>
                                                             </children>
@@ -105,6 +90,7 @@
                                 </VBox>
                             </children>
                         </VBox>
+
                     </children>
                 </VBox>
             </content>

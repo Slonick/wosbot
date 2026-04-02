@@ -297,7 +297,8 @@
  * COLORED SECTION HEADERS (TitledPanes / VBox GroupHeaders)
  * --------------------------------------------------------------------------- */
 /* Base class for a header block */
-.section-header {
+/* .section-header is removed, moved to .header-* common blocks */
+.DELETED {
     -fx-padding: 10 14;
     -fx-background-radius: 6 6 0 0;
     -fx-font-weight: bold;
@@ -305,27 +306,17 @@
     -fx-text-fill: -wos-text-dark;
 }
 
-.header-yellow {
-    -fx-background-color: -wos-yellow;
-}
+
 
 .header-cyan {
     -fx-background-color: -wos-teal;
 }
 
-.header-purple {
-    -fx-background-color: -wos-purple;
-    -fx-text-fill: white;
-}
 
-.header-green {
-    -fx-background-color: -wos-green;
-}
 
-.header-red {
-    -fx-background-color: -wos-red;
-    -fx-text-fill: white;
-}
+
+
+
 
 /* The container holding the header + content underneath has the dark bg */
 .content-card {
@@ -619,23 +610,120 @@
     -fx-border-width: 1;
 }
 
-.header-yellow {
-    -fx-background-color: -wos-yellow;
-    -fx-background-radius: 5 5 0 0;
-    -fx-padding: 8 16;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ---------------------------------------------------------------------------
+ * TASK PAGE LAYOUT UTILITIES
+ * Shared structural classes used by all task config layouts.
+ * --------------------------------------------------------------------------- */
+
+/* Outer root VBox for task pages — transparent bg, consistent padding */
+.task-page-root {
+    -fx-background-color: -wos-bg-app;
+    -fx-padding: 18;
+    -fx-spacing: 14;
 }
 
-.header-red {
-    -fx-background-color: -wos-red;
-    -fx-background-radius: 5 5 0 0;
-    -fx-padding: 8 16;
+/* Transparent ScrollPane for task pages */
+.task-page-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.task-page-scroll .viewport {
+    -fx-background-color: transparent;
+}
+
+/* Inner VBox padding inside a card body */
+.task-section-inner {
+    -fx-padding: 14;
+    -fx-spacing: 12;
+}
+
+/* Sub-section box inside a card (replaces the old #2a2a2a boxes) */
+.task-subsection {
+    -fx-background-color: #1e222b;
+    -fx-background-radius: 6;
+    -fx-border-color: #2a2e38;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-padding: 12;
+    -fx-spacing: 10;
+}
+
+/* Bold white sub-header inside a task-subsection */
+.task-subsection-title {
+    -fx-text-fill: -wos-text-primary;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+}
+
+/* Muted label for field captions */
+.task-field-label {
+    -fx-text-fill: -wos-text-secondary;
+    -fx-font-size: 12px;
+}
+
+/* Info/guide panel on the right side of 2-column layouts */
+.task-info-panel {
+    -fx-background-color: #181c24;
+    -fx-background-radius: 8;
+    -fx-border-color: #2a2e38;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 16;
+    -fx-spacing: 8;
+}
+
+.task-info-panel-title {
+    -fx-text-fill: -wos-yellow;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+}
+
+.task-info-panel-guide-header {
+    -fx-text-fill: -wos-text-primary;
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+}
+
+.task-info-panel-bullet {
+    -fx-text-fill: #b0b8c6;
+    -fx-font-size: 10px;
+}
+
+/* Description text directly below a card header */
+.task-card-description {
+    -fx-text-fill: -wos-text-secondary;
+    -fx-font-size: 11px;
+}
+
+/* Warning/note label inside task cards */
+.task-card-note {
+    -fx-text-fill: #ffcc00;
+    -fx-font-style: italic;
+    -fx-font-size: 10px;
 }
 
 /* ---------------------------------------------------------------------------
  * QUICK NAV OVERLAY (Windows 10 Start Menu Style)
  * --------------------------------------------------------------------------- */
 .quick-nav-overlay {
-    -fx-background-color: #0c0e14E6; /* Slightly more transparent to show blur cleanly */
+    -fx-background-color: rgba(17, 20, 26, 0.95);
     -fx-background: transparent;
 }
 
@@ -648,21 +736,18 @@
 }
 
 .quick-nav-card {
-    -fx-background-color: #1a1e27;
+    -fx-background-color: #161920;
     -fx-border-color: #262a36;
     -fx-border-width: 1;
     -fx-border-radius: 8;
     -fx-background-radius: 8;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 6, 0, 0, 2);
     -fx-transition: -fx-background-color 0.2s, -fx-border-color 0.2s;
 }
 
 .quick-nav-card:hover {
-    -fx-background-color: #212632;
-    -fx-border-color: #434c60;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 10, 0, 0, 4);
-    /* Removed scaling and yellow glow for a cleaner, professional feel */
+    -fx-background-color: #1e222b;
+    -fx-border-color: #3b4254;
 }
 
 .quick-nav-card-icon {
@@ -676,9 +761,9 @@
 
 .quick-nav-card-label {
     -fx-text-fill: #e6edf3;
-    -fx-font-size: 14px;
+    -fx-font-size: 14.5px;
     -fx-font-weight: bold;
-    -fx-alignment: CENTER_LEFT;
+    -fx-alignment: CENTER;
 }
 
 .quick-nav-card:hover .quick-nav-card-label {
@@ -689,7 +774,7 @@
  * SEARCH RESULTS OVERLAY
  * --------------------------------------------------------------------------- */
 .search-results-pane .viewport {
-    -fx-background-color: #11141a;
+    -fx-background-color: transparent;
 }
 
 .search-results-pane .scroll-bar {
@@ -697,17 +782,60 @@
 }
 
 .search-result-group {
-    -fx-border-color: #11141a;
+    -fx-background-color: #1a1e27;
+    -fx-border-color: #262a36;
     -fx-border-width: 1;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
-    -fx-background-color: #1e1f26;
-    /* Dark background for body/rows */
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 12, 0, 0, 6);
+    -fx-transition: -fx-border-color 0.2s, -fx-effect 0.2s;
+}
+
+.search-result-group:hover {
+    -fx-border-color: #434c60;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.6), 16, 0, 0, 8);
 }
 
 .search-group-header {
-    -fx-background-color: #2e303d;
-    -fx-background-radius: 8 8 0 0;
+    -fx-background-color: #212530;
+    -fx-background-radius: 9 9 0 0;
+    -fx-border-color: transparent transparent #262a36 transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-transition: -fx-background-color 0.2s;
+}
+
+.search-group-header:hover {
+    -fx-background-color: #2a2e3b;
+}
+
+.search-group-header .ikonli-font-icon {
+    -fx-icon-color: #636a75;
+    -fx-transition: -fx-icon-color 0.2s;
+}
+
+.search-group-header:hover .ikonli-font-icon {
+    -fx-icon-color: #fcd176;
+}
+
+.search-result-row {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent #20232d transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-background-radius: 0;
+}
+
+.search-result-row:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.04);
+}
+
+.search-result-row-last {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-background-radius: 0 0 9 9;
+}
+
+.search-result-row-last:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.04);
 }
 
 .search-go-button:hover {
@@ -724,28 +852,6 @@
 .social-icon:hover {
     -fx-opacity: 1.0;
     -fx-icon-color: #388bfd;
-}
-
-.search-group-header:hover {
-    -fx-background-color: #383b4c;
-}
-
-.search-group-header .ikonli-font-icon {
-    -fx-icon-color: #636a75;
-}
-
-.search-group-header:hover .ikonli-font-icon {
-    -fx-icon-color: #fcd176;
-}
-
-.search-result-row {
-    -fx-background-color: transparent;
-    -fx-background-radius: 0 0 8 8;
-}
-
-.search-result-row:hover {
-    -fx-background-color: #262934;
-    /* subtle hover */
 }
 
 /* ---------------------------------------------------------------------------
@@ -921,6 +1027,10 @@
     -fx-cursor: hand;
 }
 
+.action-button-add-profile .ikonli-font-icon {
+    -fx-icon-color: #0c0e12;
+}
+
 .action-button-add-profile:hover {
     -fx-background-color: #ffce54;
 }
@@ -1002,4 +1112,114 @@
 
 .title-bar-close:pressed {
     -fx-background-color: #f1707a;
+}
+
+/* ---------------------------------------------------------------------------
+ * DISCORD BUBBLE
+ * --------------------------------------------------------------------------- */
+.discord-bubble {
+    -fx-background-color: rgba(88, 101, 242, 0.15);
+    -fx-border-color: rgba(88, 101, 242, 0.5);
+    -fx-border-radius: 20;
+    -fx-background-radius: 20;
+    -fx-border-width: 1;
+    -fx-padding: 4 6 4 12;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 4, 0, 0, 2);
+}
+
+.discord-bubble:hover {
+    -fx-background-color: rgba(88, 101, 242, 0.25);
+    -fx-border-color: rgba(88, 101, 242, 0.7);
+}
+
+.discord-bubble-text {
+    -fx-text-fill: #e6edf3;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+
+.discord-bubble:hover .discord-bubble-text {
+    -fx-text-fill: #ffffff;
+}
+
+.discord-bubble-icon {
+    -fx-icon-color: #5865F2;
+    -fx-cursor: hand;
+}
+
+.discord-bubble:hover .discord-bubble-icon {
+    -fx-icon-color: #7289da;
+    -fx-effect: dropshadow(gaussian, rgba(88, 101, 242, 0.5), 6, 0, 0, 0);
+}
+
+.discord-bubble-close {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: #9eaab6;
+    -fx-font-size: 10px;
+    -fx-padding: 2 6;
+    -fx-cursor: hand;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+}
+
+.discord-bubble-close:hover {
+    -fx-text-fill: #ffffff;
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+}
+
+.discord-bubble-close:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+}
+.section-header .check-box {
+    -fx-text-fill: -wos-text-dark;
+}
+
+.header-red .check-box,
+.header-blue .check-box,
+.header-purple .check-box,
+.header-teal .check-box,
+.header-red .label,
+.header-blue .label,
+.header-purple .label {
+    -fx-text-fill: white;
+}
+
+.header-yellow .check-box,
+.header-orange .check-box,
+.header-green .check-box,
+.header-yellow .label,
+.header-orange .label,
+.header-green .label,
+.header-teal .label {
+    -fx-text-fill: -wos-text-dark;
+}
+
+
+/* Unified Header Blocks */
+.header-yellow, .header-red, .header-blue, .header-orange, .header-teal, .header-purple, .header-green {
+    -fx-padding: 10 14;
+    -fx-background-radius: 6 6 0 0;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+.header-yellow { -fx-background-color: -wos-yellow; }
+.header-red { -fx-background-color: -wos-red; -fx-text-fill: white; }
+.header-blue { -fx-background-color: -wos-blue; -fx-text-fill: white; }
+.header-orange { -fx-background-color: #f6a623; }
+.header-teal { -fx-background-color: -wos-teal; }
+.header-purple { -fx-background-color: -wos-purple; -fx-text-fill: white; }
+.header-green { -fx-background-color: -wos-green; }
+
+/* Checkboxes and Labels in headers inherit appropriate contrast */
+.header-yellow .check-box, .header-orange .check-box, .header-teal .check-box, .header-green .check-box,
+.header-yellow .label, .header-orange .label, .header-green .label, .header-teal .label {
+    -fx-text-fill: -wos-text-dark;
+}
+
+.header-red .check-box, .header-blue .check-box, .header-purple .check-box,
+.header-red .label, .header-blue .label, .header-purple .label {
+    -fx-text-fill: white;
 }

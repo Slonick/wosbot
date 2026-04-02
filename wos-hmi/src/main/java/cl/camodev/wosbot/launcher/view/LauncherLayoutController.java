@@ -69,7 +69,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.control.SeparatorMenuItem;
-import javafx.scene.effect.GaussianBlur;
+
 import javafx.scene.layout.*;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
@@ -146,10 +146,24 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
     private javafx.stage.Stage snapPreviewStage;
 
     @FXML
+    private HBox discordBubbleContainer;
+
+    @FXML
     private FontIcon iconDiscord;
 
     @FXML
     private FontIcon iconGithub;
+
+    @FXML
+    private FontIcon iconDiscordBubble;
+
+    @FXML
+    private void handleCloseDiscordBubble(ActionEvent event) {
+        if (discordBubbleContainer != null) {
+            discordBubbleContainer.setVisible(false);
+            discordBubbleContainer.setManaged(false);
+        }
+    }
 
     private Stage stage;
     private boolean quickNavVisible = false;
@@ -202,6 +216,9 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
     private void setupSocialIcons() {
         if (iconDiscord != null) {
             iconDiscord.setIconCode(MaterialDesignD.DISCORD);
+        }
+        if (iconDiscordBubble != null) {
+            iconDiscordBubble.setIconCode(MaterialDesignD.DISCORD);
         }
         if (iconGithub != null) {
             iconGithub.setIconCode(MaterialDesignG.GITHUB);
@@ -700,11 +717,24 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
         double screenY = event.getScreenY();
         javafx.geometry.Rectangle2D bounds = getScreenBoundsForPoint(screenX, screenY);
         if (bounds != null) {
-            if (screenY <= bounds.getMinY() + SNAP_THRESHOLD) {
+            boolean isLeft = screenX <= bounds.getMinX() + SNAP_THRESHOLD;
+            boolean isRight = screenX >= bounds.getMaxX() - SNAP_THRESHOLD;
+            boolean isTop = screenY <= bounds.getMinY() + SNAP_THRESHOLD;
+            boolean isBottom = screenY >= bounds.getMaxY() - SNAP_THRESHOLD;
+
+            if (isTop && isLeft) {
+                showSnapPreview(bounds.getMinX(), bounds.getMinY(), bounds.getWidth() / 2, bounds.getHeight() / 2);
+            } else if (isTop && isRight) {
+                showSnapPreview(bounds.getMinX() + bounds.getWidth() / 2, bounds.getMinY(), bounds.getWidth() / 2, bounds.getHeight() / 2);
+            } else if (isBottom && isLeft) {
+                showSnapPreview(bounds.getMinX(), bounds.getMinY() + bounds.getHeight() / 2, bounds.getWidth() / 2, bounds.getHeight() / 2);
+            } else if (isBottom && isRight) {
+                showSnapPreview(bounds.getMinX() + bounds.getWidth() / 2, bounds.getMinY() + bounds.getHeight() / 2, bounds.getWidth() / 2, bounds.getHeight() / 2);
+            } else if (isTop) {
                 showSnapPreview(bounds.getMinX(), bounds.getMinY(), bounds.getWidth(), bounds.getHeight());
-            } else if (screenX <= bounds.getMinX() + SNAP_THRESHOLD) {
+            } else if (isLeft) {
                 showSnapPreview(bounds.getMinX(), bounds.getMinY(), bounds.getWidth() / 2, bounds.getHeight());
-            } else if (screenX >= bounds.getMaxX() - SNAP_THRESHOLD) {
+            } else if (isRight) {
                 showSnapPreview(bounds.getMinX() + bounds.getWidth() / 2, bounds.getMinY(), bounds.getWidth() / 2, bounds.getHeight());
             } else {
                 hideSnapPreview();
@@ -728,15 +758,24 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
         restoreH = stage.getHeight();
 
         // Snap to top edge = maximize to visual bounds
-        if (screenY <= screenBounds.getMinY() + SNAP_THRESHOLD) {
+        boolean isLeft = screenX <= screenBounds.getMinX() + SNAP_THRESHOLD;
+        boolean isRight = screenX >= screenBounds.getMaxX() - SNAP_THRESHOLD;
+        boolean isTop = screenY <= screenBounds.getMinY() + SNAP_THRESHOLD;
+        boolean isBottom = screenY >= screenBounds.getMaxY() - SNAP_THRESHOLD;
+
+        if (isTop && isLeft) {
+            snapToTopLeft(screenBounds);
+        } else if (isTop && isRight) {
+            snapToTopRight(screenBounds);
+        } else if (isBottom && isLeft) {
+            snapToBottomLeft(screenBounds);
+        } else if (isBottom && isRight) {
+            snapToBottomRight(screenBounds);
+        } else if (isTop) {
             snapToFull(screenBounds);
-        }
-        // Snap to left edge = left half
-        else if (screenX <= screenBounds.getMinX() + SNAP_THRESHOLD) {
+        } else if (isLeft) {
             snapToLeft(screenBounds);
-        }
-        // Snap to right edge = right half
-        else if (screenX >= screenBounds.getMaxX() - SNAP_THRESHOLD) {
+        } else if (isRight) {
             snapToRight(screenBounds);
         }
     }
@@ -812,6 +851,46 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
         stage.setY(bounds.getMinY());
         stage.setWidth(bounds.getWidth() / 2);
         stage.setHeight(bounds.getHeight());
+        isCustomMaximized = true;
+        btnMaximize.setText("❐");
+    }
+
+    /** Snap window to fill the top-left quarter of the screen. */
+    private void snapToTopLeft(javafx.geometry.Rectangle2D bounds) {
+        stage.setX(bounds.getMinX());
+        stage.setY(bounds.getMinY());
+        stage.setWidth(bounds.getWidth() / 2);
+        stage.setHeight(bounds.getHeight() / 2);
+        isCustomMaximized = true;
+        btnMaximize.setText("❐");
+    }
+
+    /** Snap window to fill the top-right quarter of the screen. */
+    private void snapToTopRight(javafx.geometry.Rectangle2D bounds) {
+        stage.setX(bounds.getMinX() + bounds.getWidth() / 2);
+        stage.setY(bounds.getMinY());
+        stage.setWidth(bounds.getWidth() / 2);
+        stage.setHeight(bounds.getHeight() / 2);
+        isCustomMaximized = true;
+        btnMaximize.setText("❐");
+    }
+
+    /** Snap window to fill the bottom-left quarter of the screen. */
+    private void snapToBottomLeft(javafx.geometry.Rectangle2D bounds) {
+        stage.setX(bounds.getMinX());
+        stage.setY(bounds.getMinY() + bounds.getHeight() / 2);
+        stage.setWidth(bounds.getWidth() / 2);
+        stage.setHeight(bounds.getHeight() / 2);
+        isCustomMaximized = true;
+        btnMaximize.setText("❐");
+    }
+
+    /** Snap window to fill the bottom-right quarter of the screen. */
+    private void snapToBottomRight(javafx.geometry.Rectangle2D bounds) {
+        stage.setX(bounds.getMinX() + bounds.getWidth() / 2);
+        stage.setY(bounds.getMinY() + bounds.getHeight() / 2);
+        stage.setWidth(bounds.getWidth() / 2);
+        stage.setHeight(bounds.getHeight() / 2);
         isCustomMaximized = true;
         btnMaximize.setText("❐");
     }
@@ -1266,64 +1345,101 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
             }
         }
 
-        hideSearchOverlay();
+        boolean isNewSearch = (searchOverlay == null);
 
         // Header
         Label title = new Label("Search Results");
-        title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #e6edf3;");
+        title.setStyle("-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #ffffff; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 6, 0, 0, 3);");
 
-        Label searchingFor = new Label("Searching for: \"" + query + "\"");
-        searchingFor.setStyle("-fx-font-size: 12px; -fx-text-fill: #636a75;");
+        Label searchingFor = new Label("Searching for: ");
+        searchingFor.setStyle("-fx-font-size: 14px; -fx-text-fill: #8b949e;");
+        Label queryText = new Label("\"" + query + "\"");
+        queryText.setStyle("-fx-font-size: 14px; -fx-text-fill: #fcd176; -fx-font-weight: bold;");
+        HBox searchingBox = new HBox(4, searchingFor, queryText);
+        searchingBox.setAlignment(Pos.CENTER_LEFT);
 
         Label countLabel = new Label(totalMatches + " result" + (totalMatches == 1 ? "" : "s") + " found");
-        countLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: " + (totalMatches == 0 ? "#e05c5c;" : "#e2b340;"));
+        countLabel.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: " + (totalMatches == 0 ? "#ff271e;" : "#a0a6b2;") + " -fx-padding: 6 12 6 12; -fx-background-color: #212632; -fx-background-radius: 12;");
 
-        VBox headerBox = new VBox(2, title, searchingFor, countLabel);
-        headerBox.setPadding(new Insets(32, 32, 24, 32));
+        VBox headerBox = new VBox(12, title, searchingBox, countLabel);
+        headerBox.setAlignment(Pos.CENTER_LEFT);
+        headerBox.setPadding(new Insets(40, 40, 20, 60));
 
-        VBox resultsList = new VBox(16);
-        resultsList.setPadding(new Insets(16, 32, 32, 32));
+        VBox resultsList = new VBox(24);
+        resultsList.setPadding(new Insets(10, 60, 60, 60));
+        resultsList.setMaxWidth(1200);
 
         if (matches.isEmpty()) {
             Label none = new Label("No matching modules or settings.");
-            none.setStyle("-fx-text-fill: #636a75; -fx-font-size: 13px; -fx-padding: 16 0 0 0;");
+            none.setStyle("-fx-text-fill: #636a75; -fx-font-size: 15px; -fx-padding: 16 0 0 0;");
             resultsList.getChildren().add(none);
         } else {
+            int gIndex = 0;
             for (Map.Entry<QuickNavEntry, Map<EnumConfigurationKey, String>> moduleMatch : matches.entrySet()) {
-                resultsList.getChildren().add(createSearchResultGroup(moduleMatch.getKey(), moduleMatch.getValue(), query));
+                VBox group = createSearchResultGroup(moduleMatch.getKey(), moduleMatch.getValue(), query);
+                
+                if (isNewSearch) {
+                    group.setOpacity(0);
+                    group.setTranslateY(15);
+                    int currentIndex = gIndex;
+                    PauseTransition delay = new PauseTransition(Duration.millis(15 * currentIndex));
+                    delay.setOnFinished(e -> {
+                        FadeTransition fade = new FadeTransition(Duration.millis(100), group);
+                        fade.setFromValue(0); fade.setToValue(1);
+                        TranslateTransition translate = new TranslateTransition(Duration.millis(150), group);
+                        translate.setFromY(15); translate.setToY(0);
+                        translate.setInterpolator(Interpolator.EASE_OUT);
+                        new ParallelTransition(fade, translate).play();
+                    });
+                    delay.play();
+                } else {
+                    group.setOpacity(1);
+                    group.setTranslateY(0);
+                }
+
+                resultsList.getChildren().add(group);
+                gIndex++;
             }
         }
 
-        VBox content = new VBox(0, headerBox, resultsList);
-        content.setStyle("-fx-background-color: #11141a;");
-        content.setFillWidth(true);
+        VBox contentContainer = new VBox(0, headerBox, resultsList);
+        contentContainer.setAlignment(Pos.TOP_CENTER);
+        
+        VBox centeringWrapper = new VBox(contentContainer);
+        centeringWrapper.setAlignment(Pos.TOP_CENTER);
+        centeringWrapper.setFillWidth(true);
+        centeringWrapper.setStyle("-fx-background-color: transparent;");
 
-        ScrollPane scroll = new ScrollPane(content);
+        ScrollPane scroll = new ScrollPane(centeringWrapper);
         scroll.setFitToWidth(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        scroll.setStyle("-fx-background-color: #11141a; -fx-background: #11141a;");
+        scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
         scroll.getStyleClass().add("search-results-pane");
 
-        searchOverlay = new VBox(scroll);
-        searchOverlay.setFillWidth(true);
-        VBox.setVgrow(scroll, Priority.ALWAYS);
-        searchOverlay.setMaxWidth(Double.MAX_VALUE);
-        searchOverlay.setMaxHeight(Double.MAX_VALUE);
-        searchOverlay.setStyle("-fx-background-color: #11141a;");
-        searchOverlay.setOpacity(0);
+        if (isNewSearch) {
+            searchOverlay = new VBox(scroll);
+            searchOverlay.setFillWidth(true);
+            VBox.setVgrow(scroll, Priority.ALWAYS);
+            searchOverlay.setMaxWidth(Double.MAX_VALUE);
+            searchOverlay.setMaxHeight(Double.MAX_VALUE);
+            searchOverlay.setStyle("-fx-background-color: rgba(12, 14, 20, 0.97);");
+            searchOverlay.setOpacity(0);
 
-        StackPane.setAlignment(searchOverlay, Pos.TOP_LEFT);
-        centerStack.getChildren().add(searchOverlay);
+            StackPane.setAlignment(searchOverlay, Pos.TOP_LEFT);
+            centerStack.getChildren().add(searchOverlay);
 
-        FadeTransition ft = new FadeTransition(Duration.millis(180), searchOverlay);
-        ft.setFromValue(0);
-        ft.setToValue(1);
-        ft.play();
+            FadeTransition ft = new FadeTransition(Duration.millis(150), searchOverlay);
+            ft.setFromValue(0);
+            ft.setToValue(1);
+            ft.play();
+        } else {
+            searchOverlay.getChildren().setAll(scroll);
+        }
     }
 
     private VBox createSearchResultGroup(QuickNavEntry entry, Map<EnumConfigurationKey, String> matchedSettings, String query) {
         Label moduleLabel = new Label(entry.title());
-        moduleLabel.setStyle("-fx-text-fill: #e2b340; -fx-font-size: 14px; -fx-font-weight: bold;");
+        moduleLabel.setStyle("-fx-text-fill: #fcd176; -fx-font-size: 15px; -fx-font-weight: bold;");
 
         javafx.scene.layout.Region spacer = new javafx.scene.layout.Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -1333,7 +1449,7 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
 
         HBox header = new HBox(12, moduleLabel, spacer, navArrow);
         header.setAlignment(Pos.CENTER_LEFT);
-        header.setPadding(new Insets(10, 16, 10, 16));
+        header.setPadding(new Insets(14, 20, 14, 20));
         header.getStyleClass().add("search-group-header");
         header.setCursor(javafx.scene.Cursor.HAND);
         header.setOnMouseClicked(e -> {
@@ -1343,20 +1459,29 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
 
         VBox rowsBox = new VBox(0);
 
+        int rIndex = 0;
+        int total = matchedSettings.size();
         for (Map.Entry<EnumConfigurationKey, String> setEntry : matchedSettings.entrySet()) {
             String labelStr = setEntry.getValue();
             String enumStr = setEntry.getKey().name();
             String humanStr = enumStr.replace("_", " ").toLowerCase();
 
-            TextFlow labelFlow = buildHighlightedText(labelStr, query, "#e6edf3");
-            TextFlow enumFlow = buildHighlightedText(enumStr, query, "#8b949e");
-            TextFlow humanFlow = buildHighlightedText(humanStr, query, "#636a75");
+            TextFlow labelFlow = buildHighlightedText(labelStr, query, "#e6edf3", true);
+            TextFlow enumFlow = buildHighlightedText(enumStr, query, "#8b949e", false);
+            TextFlow humanFlow = buildHighlightedText(humanStr, query, "#636a75", false);
             humanFlow.setStyle("-fx-font-style: italic;");
 
-            HBox rowContent = new HBox(16, labelFlow, enumFlow, humanFlow);
+            HBox enumChip = new HBox(enumFlow);
+            enumChip.setStyle("-fx-background-color: #13151b; -fx-padding: 3 8; -fx-background-radius: 6; -fx-border-color: #262a36; -fx-border-radius: 6; -fx-border-width: 1;");
+
+            HBox rowContent = new HBox(16, labelFlow, enumChip, humanFlow);
             rowContent.setAlignment(Pos.CENTER_LEFT);
-            rowContent.setPadding(new Insets(12, 16, 12, 16));
-            rowContent.getStyleClass().add("search-result-row");
+            rowContent.setPadding(new Insets(14, 24, 14, 24));
+            if (rIndex == total - 1) {
+                rowContent.getStyleClass().add("search-result-row-last");
+            } else {
+                rowContent.getStyleClass().add("search-result-row");
+            }
             rowContent.setCursor(javafx.scene.Cursor.HAND);
             rowContent.setOnMouseClicked(e -> {
                 navSearchField.clear();
@@ -1364,49 +1489,74 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
             });
 
             rowsBox.getChildren().add(rowContent);
+            rIndex++;
         }
 
         VBox group = new VBox(0);
+        if (matchedSettings.isEmpty()) {
+            header.setStyle("-fx-background-radius: 9; -fx-border-width: 0;");
+        }
         group.getChildren().add(header);
         if (!matchedSettings.isEmpty()) {
             group.getChildren().add(rowsBox);
         }
         group.getStyleClass().add("search-result-group");
         group.setFillWidth(true);
+        
+        // Cache node to fix low FPS when scrolling over drop shadows
+        group.setCache(true);
+        group.setCacheShape(true);
+        group.setCacheHint(javafx.scene.CacheHint.SPEED);
+        
         return group;
     }
 
-    private TextFlow buildHighlightedText(String text, String query, String baseColor) {
+    private TextFlow buildHighlightedText(String text, String query, String baseColor, boolean isBold) {
         TextFlow flow = new TextFlow();
         String lText = text.toLowerCase();
         String lQuery = query.toLowerCase();
+        String weight = isBold ? "; -fx-font-weight: bold;" : ";";
         int idx = lText.indexOf(lQuery);
         if (idx < 0) {
             Text t = new Text(text);
-            t.setStyle("-fx-fill: " + baseColor + "; -fx-font-size: 13px;");
+            t.setStyle("-fx-fill: " + baseColor + "; -fx-font-size: 13px" + weight);
             flow.getChildren().add(t);
             return flow;
         }
         if (idx > 0) {
             Text before = new Text(text.substring(0, idx));
-            before.setStyle("-fx-fill: " + baseColor + "; -fx-font-size: 13px;");
+            before.setStyle("-fx-fill: " + baseColor + "; -fx-font-size: 13px" + weight);
             flow.getChildren().add(before);
         }
         Text match = new Text(text.substring(idx, idx + query.length()));
-        match.setStyle("-fx-fill: #ffffff; -fx-font-size: 13px; -fx-font-weight: bold;");
+        match.setStyle("-fx-fill: #fcd176; -fx-font-size: 13px; -fx-font-weight: bold; -fx-underline: true;");
         flow.getChildren().add(match);
         if (idx + query.length() < text.length()) {
             Text after = new Text(text.substring(idx + query.length()));
-            after.setStyle("-fx-fill: " + baseColor + "; -fx-font-size: 13px;");
+            after.setStyle("-fx-fill: " + baseColor + "; -fx-font-size: 13px" + weight);
             flow.getChildren().add(after);
         }
         return flow;
     }
 
     private void hideSearchOverlay() {
+        hideSearchOverlay(false);
+    }
+
+    private void hideSearchOverlay(boolean immediate) {
         if (searchOverlay == null) return;
-        centerStack.getChildren().remove(searchOverlay);
+        Node overlayToRemove = searchOverlay;
         searchOverlay = null;
+
+        if (immediate) {
+            centerStack.getChildren().remove(overlayToRemove);
+        } else {
+            FadeTransition ft = new FadeTransition(Duration.millis(150), overlayToRemove);
+            ft.setFromValue(overlayToRemove.getOpacity());
+            ft.setToValue(0);
+            ft.setOnFinished(ev -> centerStack.getChildren().remove(overlayToRemove));
+            ft.play();
+        }
     }
 
     // ==================== QUICK NAV OVERLAY ====================
@@ -1431,14 +1581,12 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
         if (centerStack == null) return;
         quickNavVisible = true;
 
-        mainContentPane.setEffect(new GaussianBlur(18));
-
         int columns = 4;
         GridPane grid = new GridPane();
         grid.setHgap(16);
         grid.setVgap(16);
         grid.setAlignment(Pos.CENTER);
-        grid.setPadding(new Insets(16));
+        grid.setMaxWidth(1100);
 
         for (int c = 0; c < columns; c++) {
             ColumnConstraints cc = new ColumnConstraints();
@@ -1454,21 +1602,10 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
             index++;
         }
 
-        Label heading = new Label("Quick Navigation");
-        heading.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: white;");
-
-        Label subtitle = new Label("Click any tile to jump directly to that module");
-        subtitle.setStyle("-fx-font-size: 13px; -fx-text-fill: #636a75;");
-
-        VBox headingBox = new VBox(6);
-        headingBox.setAlignment(Pos.CENTER);
-        headingBox.getChildren().addAll(heading, subtitle);
-
-        VBox overlayContent = new VBox(32);
-        overlayContent.setAlignment(Pos.TOP_CENTER);
-        overlayContent.setPadding(new Insets(40, 40, 40, 40));
-        overlayContent.setMaxWidth(1100);
-        overlayContent.getChildren().addAll(headingBox, grid);
+        VBox overlayContent = new VBox();
+        overlayContent.setAlignment(Pos.CENTER);
+        overlayContent.setPadding(new Insets(40, 60, 40, 60));
+        overlayContent.getChildren().add(grid);
 
         overlayContent.setOnMouseClicked(e -> {
             if (e.getTarget() == overlayContent) hideQuickNav();
@@ -1480,52 +1617,38 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
         scrollOverlay.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scrollOverlay.getStyleClass().add("quick-nav-overlay");
         scrollOverlay.setOpacity(0);
-        scrollOverlay.setScaleX(0.96);
-        scrollOverlay.setScaleY(0.96);
+        // Removed scale animation for a snappier, flat feel based on second image.
 
         quickNavOverlay = scrollOverlay;
         centerStack.getChildren().add(scrollOverlay);
 
-        FadeTransition fadeIn = new FadeTransition(Duration.millis(220), scrollOverlay);
+        FadeTransition fadeIn = new FadeTransition(Duration.millis(150), scrollOverlay);
         fadeIn.setFromValue(0);
         fadeIn.setToValue(1);
-
-        ScaleTransition scaleIn = new ScaleTransition(Duration.millis(280), scrollOverlay);
-        scaleIn.setFromX(0.96); scaleIn.setFromY(0.96);
-        scaleIn.setToX(1.0); scaleIn.setToY(1.0);
-        scaleIn.setInterpolator(Interpolator.EASE_OUT);
-
-        new ParallelTransition(fadeIn, scaleIn).play();
+        fadeIn.play();
     }
 
     private HBox createQuickNavCard(QuickNavEntry entry, int index) {
-        FontIcon cardIcon = new FontIcon(entry.icon());
-        cardIcon.setIconSize(24);
-        cardIcon.getStyleClass().add("quick-nav-card-icon");
-
         Label cardLabel = new Label(entry.title());
         cardLabel.getStyleClass().add("quick-nav-card-label");
-        cardLabel.setAlignment(Pos.CENTER_LEFT);
+        cardLabel.setAlignment(Pos.CENTER);
 
-        HBox card = new HBox(16);
-        card.setAlignment(Pos.CENTER_LEFT);
-        card.setMinHeight(70);
-        card.setPadding(new Insets(16, 24, 16, 24));
+        HBox card = new HBox(8);
+        card.setAlignment(Pos.CENTER);
+        card.setMinHeight(75);
+        card.setPadding(new Insets(12, 16, 12, 16));
         card.getStyleClass().add("quick-nav-card");
         GridPane.setHgrow(card, Priority.ALWAYS);
 
-        card.getChildren().addAll(cardIcon, cardLabel);
+        card.getChildren().add(cardLabel);
         card.setOpacity(0);
-        card.setTranslateY(24);
 
-        PauseTransition delay = new PauseTransition(Duration.millis(25 * index));
+        // Subtler stagger
+        PauseTransition delay = new PauseTransition(Duration.millis(15 * index));
         delay.setOnFinished(e -> {
-            FadeTransition cardFade = new FadeTransition(Duration.millis(180), card);
+            FadeTransition cardFade = new FadeTransition(Duration.millis(150), card);
             cardFade.setFromValue(0); cardFade.setToValue(1);
-            TranslateTransition cardSlide = new TranslateTransition(Duration.millis(220), card);
-            cardSlide.setFromY(24); cardSlide.setToY(0);
-            cardSlide.setInterpolator(Interpolator.EASE_OUT);
-            new ParallelTransition(cardFade, cardSlide).play();
+            cardFade.play();
         });
         delay.play();
 
@@ -1541,20 +1664,15 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
         if (!quickNavVisible || quickNavOverlay == null || centerStack == null) return;
         quickNavVisible = false;
 
-        FadeTransition fadeOut = new FadeTransition(Duration.millis(150), quickNavOverlay);
+        FadeTransition fadeOut = new FadeTransition(Duration.millis(100), quickNavOverlay);
         fadeOut.setFromValue(1); fadeOut.setToValue(0);
 
-        ScaleTransition scaleOut = new ScaleTransition(Duration.millis(150), quickNavOverlay);
-        scaleOut.setToX(0.96); scaleOut.setToY(0.96);
-        scaleOut.setInterpolator(Interpolator.EASE_IN);
-
-        ParallelTransition exitAnim = new ParallelTransition(fadeOut, scaleOut);
-        exitAnim.setOnFinished(e -> {
+        fadeOut.setOnFinished(e -> {
             centerStack.getChildren().remove(quickNavOverlay);
             quickNavOverlay = null;
-            mainContentPane.setEffect(null);
         });
-        exitAnim.play();
+
+        fadeOut.play();
     }
 
     // ==================== MODULE DEFINITION ====================

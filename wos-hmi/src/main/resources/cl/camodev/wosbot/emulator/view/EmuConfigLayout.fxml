@@ -5,7 +5,7 @@
 <?import javafx.scene.layout.*?>
 
 <VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308"
-      spacing="16" style="-fx-padding: 16;" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1">
+      spacing="16" styleClass="task-page-root" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1">
    <children>
 
       <!-- Emulators Table -->
@@ -29,9 +29,9 @@
           <children>
               <!-- Left Card: Instance Settings -->
               <VBox styleClass="content-card" HBox.hgrow="ALWAYS">
-                  <VBox styleClass="section-header, header-yellow">
-                      <Label text="Instance Settings" style="-fx-text-fill: black;" />
-                  </VBox>
+                  <HBox alignment="CENTER_LEFT" maxWidth="1.7976931348623157E308" styleClass="header-yellow">
+                       <children><Label text="Instance Settings" /></children>
+                   </HBox>
                   <VBox spacing="10" styleClass="content-card-inner">
                       <!-- Idle Behavior -->
                       <HBox alignment="CENTER_LEFT" spacing="10">
@@ -52,7 +52,7 @@
                           <TextField fx:id="textfieldMaxConcurrentInstances" maxWidth="60.0" minWidth="60.0" prefWidth="60.0" />
                       </HBox>
                       <!-- Auto Start -->
-                      <VBox spacing="5" style="-fx-padding: 8 0 0 0;">
+                      <VBox spacing="5" styleClass="auto-start-container">
                           <CheckBox fx:id="checkboxAutoStart" text="Auto start all Profiles after module load" />
                           <HBox alignment="CENTER_LEFT" spacing="8">
                               <Label text="Delay:" />
@@ -66,9 +66,9 @@
 
               <!-- Right Card: Game Settings -->
               <VBox styleClass="content-card" HBox.hgrow="ALWAYS">
-                  <VBox styleClass="section-header, header-cyan">
-                      <Label text="Game Settings" style="-fx-text-fill: black;" />
-                  </VBox>
+                  <HBox alignment="CENTER_LEFT" maxWidth="1.7976931348623157E308" styleClass="header-teal">
+                       <children><Label text="Game Settings" /></children>
+                   </HBox>
                   <VBox spacing="10" styleClass="content-card-inner">
                       <!-- Game Version -->
                       <HBox alignment="CENTER_LEFT" spacing="10">
