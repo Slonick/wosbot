@@ -42,8 +42,8 @@ public class TundraTruckEventTask extends DelayedTask {
 			new DTOPoint(588, 405),
 			new DTOPoint(622, 436));
 	private static final DTOArea CONFIRM_CHECKBOX = new DTOArea(
-			new DTOPoint(200, 704),
-			new DTOPoint(220, 722));
+			new DTOPoint(445, 667),
+			new DTOPoint(586, 806));
 	private static final DTOArea CANCEL_POPUP = new DTOArea(
 			new DTOPoint(626, 438),
 			new DTOPoint(643, 454));
@@ -69,6 +69,9 @@ public class TundraTruckEventTask extends DelayedTask {
 	private static final DTOArea TIPS_POPUP_CHECKBOX = new DTOArea(
 			new DTOPoint(198, 699),
 			new DTOPoint(225, 726));
+
+	// When a truck is already departed and selected, the details screen is different and the truck position is shifted up by 143 pixels.
+	private static final int TRUCK_ALT_POSITION_Y_OFFSET = -143;
 
 	// Retry limits
 	private static final int MAX_NAVIGATION_ATTEMPTS = 2;
@@ -408,8 +411,14 @@ public class TundraTruckEventTask extends DelayedTask {
 	 * Attempt to send both trucks
 	 */
 	private void attemptSendTrucks() {
+		int rightTruckYOffset = 0;
 		TruckStatus leftStatus = checkTruckStatus(TruckSide.LEFT);
-		TruckStatus rightStatus = checkTruckStatus(TruckSide.RIGHT);
+		if(leftStatus == TruckStatus.DEPARTED)
+		{
+			rightTruckYOffset = TRUCK_ALT_POSITION_Y_OFFSET;
+		}
+		TruckStatus rightStatus = checkTruckStatus(TruckSide.RIGHT, 0, rightTruckYOffset);
+
 
 		// If both already departed, just schedule next check
 		if (leftStatus == TruckStatus.DEPARTED && rightStatus == TruckStatus.DEPARTED) {
@@ -428,7 +437,7 @@ public class TundraTruckEventTask extends DelayedTask {
 
 		if (rightStatus == TruckStatus.AVAILABLE) {
 			logInfo("Attempting to send right truck.");
-			rightSent = trySendTruck(TruckSide.RIGHT);
+			rightSent = trySendTruck(TruckSide.RIGHT, 0, ((leftStatus == TruckStatus.DEPARTED) || leftSent) ? rightTruckYOffset : 0);
 		}
 
 		logInfo((leftSent || rightSent ? "Truck(s) sent" : "No trucks sent") + ". Scheduling next check.");
@@ -437,10 +446,19 @@ public class TundraTruckEventTask extends DelayedTask {
 
 	/**
 	 * Check status of a specific truck
+	 * @param side Left or Right truck
+	 * @param xoffset Optional X offset to apply to search area (for details screen), defaults to 0
+	 * @param yoffset Optional Y offset to apply to search area (for details screen), defaults to 0
+	 * @return TruckStatus enum indicating if truck is available, departed, or not found
 	 */
-	private TruckStatus checkTruckStatus(TruckSide side) {
-		DTOPoint start = side == TruckSide.LEFT ? LEFT_TRUCK.topLeft() : RIGHT_TRUCK.topLeft();
-		DTOPoint end = side == TruckSide.LEFT ? LEFT_TRUCK.bottomRight() : RIGHT_TRUCK.bottomRight();
+	private TruckStatus checkTruckStatus(TruckSide side, int xoffset, int yoffset) {
+
+		DTOPoint start = new DTOPoint(side == TruckSide.LEFT ? LEFT_TRUCK.topLeft() : RIGHT_TRUCK.topLeft());
+		DTOPoint end = new DTOPoint(side == TruckSide.LEFT ? LEFT_TRUCK.bottomRight() : RIGHT_TRUCK.bottomRight());
+		start.addX(xoffset);
+		start.addY(yoffset);
+		end.addX(xoffset);
+		end.addY(yoffset);
 
 		// Tap to open truck details
 		tapRandomPoint(start, end);
@@ -452,9 +470,7 @@ public class TundraTruckEventTask extends DelayedTask {
 				SearchConfigConstants.DEFAULT_SINGLE);
 		if (departedResult.isFound()) {
 			logInfo(side + " truck has already departed");
-			tapRandomPoint(CLOSE_DETAIL.topLeft(), CLOSE_DETAIL.bottomRight());
-			sleepTask(300);
-			closeWindow();
+			// The details display differently for a departed truck. There is not window to close
 			return TruckStatus.DEPARTED;
 		}
 
@@ -477,15 +493,23 @@ public class TundraTruckEventTask extends DelayedTask {
 		return TruckStatus.NOT_FOUND;
 	}
 
+	private TruckStatus checkTruckStatus(TruckSide side) {
+		return checkTruckStatus(side, 0, 0);
+	}
+
 	/**
 	 * Try to send a specific truck
 	 */
-	private boolean trySendTruck(TruckSide side) {
-		DTOPoint start = side == TruckSide.LEFT ? LEFT_TRUCK.topLeft() : RIGHT_TRUCK.topLeft();
-		DTOPoint end = side == TruckSide.LEFT ? LEFT_TRUCK.bottomRight() : RIGHT_TRUCK.bottomRight();
+	private boolean trySendTruck(TruckSide side, int xoffset, int yoffset) {
+		DTOPoint start = new DTOPoint(side == TruckSide.LEFT ? LEFT_TRUCK.topLeft() : RIGHT_TRUCK.topLeft());
+		DTOPoint end = new DTOPoint(side == TruckSide.LEFT ? LEFT_TRUCK.bottomRight() : RIGHT_TRUCK.bottomRight());
+		start.addX(xoffset);
+		start.addY(yoffset);
+		end.addX(xoffset);
+		end.addY(yoffset);
 
 		tapRandomPoint(start, end);
-		sleepTask(300);
+		sleepTask(500);
 
 		// Check if already departed
 		if (isTruckDeparted(side)) {
@@ -519,10 +543,15 @@ public class TundraTruckEventTask extends DelayedTask {
 				SearchConfigConstants.SINGLE_WITH_2_RETRIES);
 		if (tipsPopup.isFound()) {
 			tapRandomPoint(TIPS_POPUP_CHECKBOX.topLeft(), TIPS_POPUP_CHECKBOX.bottomRight(), 1, 300);
+			sleepTask(100);
 			tapRandomPoint(CONFIRM_CHECKBOX.topLeft(), CONFIRM_CHECKBOX.bottomRight(), 1, 300);
 		}
 
 		return true;
+	}
+
+	private boolean trySendTruck(TruckSide side) {
+		return trySendTruck(side, 0, 0);
 	}
 
 	/**

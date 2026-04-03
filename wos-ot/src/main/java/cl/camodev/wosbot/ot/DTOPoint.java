@@ -9,10 +9,25 @@ public class DTOPoint {
 		this.y = y;
 	}
 
+	public DTOPoint(DTOPoint other) {
+	this.x = other.x;
+	this.y = other.y;
+	}
+	
 	public int getX() {
 		return x;
 	}
 
+	public int addX(int offset) {
+		this.x += offset;
+		return this.x;
+	}
+
+	public int addY(int offset) {
+		this.y += offset;
+		return this.y;
+	}
+	
 	public int getY() {
 		return y;
 	}
