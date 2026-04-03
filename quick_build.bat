@@ -10,12 +10,6 @@ taskkill /F /IM javaw.exe >nul 2>&1
 taskkill /F /IM adb.exe >nul 2>&1
 timeout /t 2 >nul
 
-call mvn clean
-if errorlevel 1 (
-    echo [ERROR] Clean failed! Check if files are locked.
-    pause
-    exit /b %errorlevel%
-)
 call mvn clean install package
 if errorlevel 1 (
     echo [ERROR] Build failed!

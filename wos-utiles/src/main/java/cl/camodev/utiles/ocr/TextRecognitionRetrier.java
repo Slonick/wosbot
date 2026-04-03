@@ -62,8 +62,15 @@ public class TextRecognitionRetrier<T> {
             logger.debug("Performing OCR (attempt {} of {})", attempt + 1, maxRetries);
             try {
                 String raw = textRecognitionProvider.ocrRegion(p1, p2, settings);
-                if (raw != null && successPredicate.test(raw)) {
-                    return converter.apply(raw);
+                if (raw != null) {
+                    if (successPredicate.test(raw)) {
+                        logger.info("=== OCR Completed === Text: '{}', Match: true, Position: ({},{}) to ({},{})", 
+                                raw.trim().replace("\n", " "), p1.getX(), p1.getY(), p2.getX(), p2.getY());
+                        return converter.apply(raw);
+                    } else if (attempt == maxRetries - 1) {
+                        logger.info("=== OCR Completed === Text: '{}', Match: false, Position: ({},{}) to ({},{})", 
+                                raw.trim().replace("\n", " "), p1.getX(), p1.getY(), p2.getX(), p2.getY());
+                    }
                 }
             } catch (IOException | TesseractException | RuntimeException e) {
                 logger.warn("OCR attempt {} threw an exception: {}", attempt + 1, e.getMessage());

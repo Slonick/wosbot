@@ -193,7 +193,6 @@ public class TelegramBotService implements IBotStateListener {
         } else if (text.startsWith("/stats") || text.contains("stats")) {
             Thread.ofVirtual().start(() -> handleStatsCommand(chatId));
         } else if (text.startsWith("/logs") || text.contains("logs")) {
-            sendMessage(chatId, "📄 Fetching logs...");
             Thread.ofVirtual().start(() -> handleLogsCommand(chatId));
         } else if (text.startsWith("/profiles") || text.contains("profiles")) {
             Thread.ofVirtual().start(() -> handleProfilesCommand(chatId, -1L));
@@ -816,6 +815,19 @@ public class TelegramBotService implements IBotStateListener {
                     }
                     handleProfileToggleCallback(callbackId, chatId, messageId, Long.parseLong(parts[1]));
                 }
+                case "log_dl" -> {
+                    if (parts.length < 2) {
+                        answerCallbackQuery(callbackId, "");
+                        return;
+                    }
+                    answerCallbackQuery(callbackId, "📥 Downloading...");
+                    String type = parts[1];
+                    String path = "log/bot.log";
+                    if ("clean".equals(type)) {
+                        path = "wos-hmi/target/log/CleanBot.log";
+                    }
+                    sendDocument(chatId, path);
+                }
                 default -> answerCallbackQuery(callbackId, "");
             }
         } catch (NumberFormatException e) {
@@ -1154,8 +1166,21 @@ public class TelegramBotService implements IBotStateListener {
     }
 
     private void handleLogsCommand(long chatId) {
-        String logPath = "log/bot.log";
-        sendDocument(chatId, logPath);
+        String text = "📄 *Log Center*\n"
+                + "━━━━━━━━━━━━━━━━━━━━━━\n"
+                + "Select a log file to download:";
+
+        ArrayNode kb = objectMapper.createArrayNode();
+        ArrayNode row = objectMapper.createArrayNode();
+
+        row.add(objectMapper.createObjectNode().put("text", "📄 bot.log").put("callback_data", "log_dl:bot"));
+        row.add(objectMapper.createObjectNode().put("text", "🧹 CleanBot.log").put("callback_data", "log_dl:clean"));
+        kb.add(row);
+
+        ObjectNode markup = objectMapper.createObjectNode();
+        markup.set("inline_keyboard", kb);
+
+        sendOrEditMessage(chatId, -1L, text, markup, "MarkdownV2");
     }
 
     private void sendDocument(long chatId, String filePath) {

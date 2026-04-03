@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+    <conversionRule conversionWord="nlOnClassChange" converterClass="cl.camodev.wosbot.logging.LoggerNameChangeConverter" />
+    <conversionRule conversionWord="cleanMsg" converterClass="cl.camodev.wosbot.logging.CleanBotMessageConverter" />
     <!-- Silence logback's own status messages -->
     <statusListener class="ch.qos.logback.core.status.NopStatusListener" />
 
-    <!-- Console Appender -->
+    <!-- ═══════════════════════════════════════════════════════════
+         CONSOLE — existing format, unchanged
+    ═══════════════════════════════════════════════════════════ -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <target>System.out</target>
         <encoder>
@@ -11,19 +15,17 @@
         </encoder>
     </appender>
 
-    <!-- Rolling File Appender with header -->
+    <!-- ═══════════════════════════════════════════════════════════
+         BOT.LOG — existing rolling file, completely unchanged
+    ═══════════════════════════════════════════════════════════ -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>log/bot.log</file>
         <append>true</append>
         <immediateFlush>true</immediateFlush>
-
-        <!-- Use an encoder with layout wrapping for proper header -->
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss} [%-5.5level] - %m [%c{1}]%n</pattern>
         </encoder>
-
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <!-- daily rollover with compression -->
             <fileNamePattern>log/bot.log.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
             <maxFileSize>10MB</maxFileSize>
             <maxHistory>5</maxHistory>
@@ -31,27 +33,91 @@
         </rollingPolicy>
     </appender>
 
-    <!-- Package-specific logger levels -->
-    <logger name="cl.camodev.wosbot.main" level="INFO"/>
-    <logger name="cl.camodev.wosbot.emulator" level="INFO"/>
-    <logger name="cl.camodev.wosbot.serv.task" level="INFO"/>
-    <logger name="cl.camodev.wosbot.launcher" level="INFO"/>
+    <!-- ═══════════════════════════════════════════════════════════
+         CLEANBOT.LOG — clean, aligned, INFO+ only (no DEBUG noise)
 
-    <!-- Debug levels for specific components -->
-    <logger name="cl.camodev.wosbot.emulator.impl" level="DEBUG"/>
-    <logger name="cl.camodev.wosbot.serv.task.TaskQueue" level="DEBUG"/>
+         Format:  HH:mm:ss  LEVEL  [Profile        ]  ClassName             Message
+         Example: 18:44:33  INFO   [Default        ]  GatherTask            Gathering resources started
+                  18:44:35  WARN   [Default        ]  NavigationHelper      Events button not found
+                  18:45:01  ERROR  [Default        ]  DelayedTask           Game not running
+    ═══════════════════════════════════════════════════════════ -->
+    <appender name="CLEAN_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>log/CleanBot.log</file>
+        <append>true</append>
+        <immediateFlush>true</immediateFlush>
 
-    <!-- Suppress verbose logging from third-party libraries -->
-    <logger name="com.android.ddmlib" level="WARN"/>
-    <logger name="org.hibernate" level="ERROR"/>
-    <logger name="javafx" level="ERROR"/>
-    <logger name="com.zaxxer.hikari" level="ERROR"/>
-    <logger name="com.sun.javafx" level="ERROR"/>
-    <logger name="javax.persistence" level="ERROR"/>
+        <!-- Only write INFO and above — blocks all DEBUG clutter -->
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>INFO</level>
+        </filter>
+        
+        <!-- Clean the noisy logs dynamically -->
+        <filter class="cl.camodev.wosbot.logging.CleanBotFilter" />
 
-    <!-- Root logger configuration -->
+        <encoder>
+            <pattern>%nlOnClassChange%d{HH:mm:ss}  %-5level  %-16([%X{profile:-SYSTEM}])  %-25logger{0}  %cleanMsg%n</pattern>
+        </encoder>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>log/CleanBot.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
+            <maxFileSize>5MB</maxFileSize>
+            <maxHistory>3</maxHistory>
+            <totalSizeCap>20MB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PER-PROFILE SIFTING — routes each profile to its own file
+         via MDC key "profile" set by ProfileLogger.
+         Replaces the manual PrintWriter management entirely.
+
+         Creates:  log/profile_Default.log
+                   log/profile_MyOtherProfile.log  (auto-created)
+    ═══════════════════════════════════════════════════════════ -->
+    <appender name="PROFILE_SIFT" class="ch.qos.logback.classic.sift.SiftingAppender">
+        <discriminator class="ch.qos.logback.classic.sift.MDCBasedDiscriminator">
+            <key>profile</key>
+            <defaultValue>system</defaultValue>
+        </discriminator>
+        <sift>
+            <appender name="PROFILE-${profile}" class="ch.qos.logback.core.rolling.RollingFileAppender">
+                <file>log/profile_${profile}.log</file>
+                <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                    <fileNamePattern>log/profile_${profile}.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
+                    <maxFileSize>10MB</maxFileSize>
+                    <maxHistory>5</maxHistory>
+                    <totalSizeCap>50MB</totalSizeCap>
+                </rollingPolicy>
+                <encoder>
+                    <pattern>%d{HH:mm:ss}  %-5level  %-25logger{0}  %msg%n</pattern>
+                </encoder>
+            </appender>
+        </sift>
+    </appender>
+
+    <!-- ─── Package logger levels ─── -->
+    <logger name="cl.camodev.wosbot.main"          level="INFO"/>
+    <logger name="cl.camodev.wosbot.emulator"      level="INFO"/>
+    <logger name="cl.camodev.wosbot.serv.task"     level="INFO"/>
+    <logger name="cl.camodev.wosbot.launcher"      level="INFO"/>
+
+    <!-- These were DEBUG — major source of log clutter — raised to INFO -->
+    <logger name="cl.camodev.wosbot.emulator.impl"        level="INFO"/>
+    <logger name="cl.camodev.wosbot.serv.task.TaskQueue"  level="INFO"/>
+
+    <!-- Third-party library suppression -->
+    <logger name="com.android.ddmlib"  level="WARN"/>
+    <logger name="org.hibernate"       level="ERROR"/>
+    <logger name="javafx"              level="ERROR"/>
+    <logger name="com.zaxxer.hikari"   level="ERROR"/>
+    <logger name="com.sun.javafx"      level="ERROR"/>
+    <logger name="javax.persistence"   level="ERROR"/>
+
+    <!-- Root: write to all four destinations -->
     <root level="INFO">
-        <appender-ref ref="CONSOLE" />
-        <appender-ref ref="FILE" />
+        <appender-ref ref="CONSOLE"      />
+        <appender-ref ref="FILE"         />
+        <appender-ref ref="CLEAN_FILE"   />
+        <appender-ref ref="PROFILE_SIFT" />
     </root>
 </configuration>
