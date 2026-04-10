@@ -5,17 +5,48 @@ Explain the expected tundra truck task execution.
 Event possible state : {inactive, count down, active, ended}  
 Activities : 
 - manage my two trucks (left, right) 
-- truck possible states are : {available, departed, arrived, unavailable}
 - raid on trucks.
+- Offer Escort to alliance players, ask for escort on a truck.
 
-Raid on trucks is not supported.
+truck properties :
+- truck possible states are : {available, departed, arrived, unavailable}
+- truck possible qualities are : { "Normal", Common "N", rare "R", Super rare "SSR"}
+
+
+
+The game rule : 
+
+Player Sends the truck with the best possible quality to earn resources.
+The truck quality is random, and you can refresh the truck quality a certain amount of time.
+So the sequence is for the player : 
+    - checken on left or right truck state
+    - if available open the truck details window
+        + Option to Refresh truck if needed (truck not ssr) for better truck quality. Freely or paid.
+        + Option to be escorted (once a day)
+        + Validate to send the truck with display disparted state.
+    - if arrived collect them.
+Inpendently the player can offer escort.
+
+More details at this [wiki](https://www.whiteoutsurvival.wiki/events/tundra-trade-route/)
+
+Captures :
+The truck tab view : 
+![trucks tab view](truck_available_departed.png)
+After left truck selected, right truck position has changed : 
+![trucks tab view](truck_available_departed_details.png) 
+
+Dialog asking to confirm a not SSR truck to send : 
+![confirm send dialog](confirm_send_truck.png)
 
 # Task Pre-requesite
 
 Must be on the world or home screen.  
-if option activation time set up : check it otherwise postone execution.
+if option activation time set up : check it otherwise postpone execution.
 
 # Task Execution
+
+Raid on trucks is not supported.
+Escort feature is not supported.
 
 ```
 Go to Tundra Truck Event screen through Menu
@@ -61,39 +92,44 @@ How the SSR truck is searched :
             else tap cancel popup and close truck windows
     repeat steps MAX_REFRESH_ATTEMPTS unless no free refresh or no gem refresh possible.           
 ```
-Note : if SSR truck is not required it goes with the one available. The free trials are not consumed.
-
+Task settings : 
+  - "Go Only for SSR trucks" : if not checked the task will not seek for better trucks, it direclty send
+  - "Use gems for refresh" : if previous option is checked, it will spend gems until SSR truck is found (reminder : 6 refresh garantee to find an SSR)
+  - Activation time : at wich time you want the task to start sending trucks.
 
 # Task End
 
 reschedule soonest to send a truck that has just arrived.
 
-# Exit cases : 
+# Task Exit cases : 
 
-Success - truck are sent
-Success - not truck found.
+Success - all trucks are either {departed, unavailable} after task exits.
+Error - no truck found.
 
 # Failure case not handled :
 
 Zone to TAP are not all checked before tapping.
 
-
 # Stat
 
-A log will report at each execution : 
- - How many truck were sent per side.
- - if a OCR failed.
- 
- Tipically each day should have 4 truck sent total.
- 
+No stat are displayed by now. this is WIP.
+
+The task is performing well if before event reset remaining départures is 0 (4 trucks sent), unless the activation time does not allow it.
+The task counts for each truck : 
+- the number of trucks sent
+- The number for a call to refresh
+- the number of truck collect.
+
+The stask is stateless so it cannot reset counts. Is is done by user.
+
 # configuration : 
 
 ## View : 
 
-TruckSSR (bool) : try to find SSR
-Use gems (bool) : send gems to refresh and find SSR.
-Use activation time (bool) : only launch task from this time.
-Activation time (date) : time to start to launch trucks
+TruckSSR (bool) : try to find SSR  
+Use gems (bool) : send gems to refresh and find SSR.  
+Use activation time (bool) : only launch task from this time.  
+Activation time (date) : time to start to launch trucks  
 
 ## Static in code : 
 
@@ -144,3 +180,20 @@ You can look at the source code folder [wosbot\wos-serv\src\main\resources\] for
 	TUNDRA_TREK_CHECK_ACTIVE("/templates/tundratrek/checkactiveTrek.png"),
 	TUNDRA_TREK_CHECK_INACTIVE("/templates/tundratrek/checkinactiveTrek.png")
 ```
+
+# Task improvements
+
+That's very difficult to say when a OCR is failing, because the task does not maintain a event, truck status update available for next action, so that we don't know atm we tap if the OCR negative result is an error.  
+Tipically when a truck is detected available, it is not passed to the function that sends the truck, which does not declare error if it detected the truck is departed, or the button escort not found.  
+more-over after taping to send the truck is does not confirm it by OCR.  
+
+The task sall make the event/truck state updated so that a inconsisty can be detected and reported : 
+- remaining departures read error
+- truck not found while checking status.
+- escort button not found while trying to send
+- sending truck no confirmed after sending it.
+
+Another improvements would be to support the features : 
+- offer assistance
+- ask for assistance
+- raid on trucks.
