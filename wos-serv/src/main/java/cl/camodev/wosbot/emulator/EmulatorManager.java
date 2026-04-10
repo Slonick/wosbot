@@ -46,6 +46,8 @@ public class EmulatorManager {
     private final Map<String, Thread> emulatorToThread = new HashMap<>();
     // Map: Thread -> emulatorNumber (reverse lookup)
     private final Map<Thread, String> threadToEmulator = new HashMap<>();
+    // Map: emulatorNumber -> epoch millis. Prevents immediate profile switch reconnect.
+    private final Map<String, Long> emulatorAcquireNotBefore = new HashMap<>();
 
     private EmulatorManager() {
 
@@ -730,6 +732,26 @@ public class EmulatorManager {
         return !activeThread.equals(currentThread);
     }
 
+    private long getProfileSwitchCooldownMs() {
+        return Optional.ofNullable(ServConfig.getServices().getGlobalConfig())
+                .map(cfg -> cfg.get(EnumConfigurationKey.PROFILE_SWITCH_COOLDOWN_MS_INT.name()))
+                .map(Long::parseLong)
+                .orElse(Long.parseLong(EnumConfigurationKey.PROFILE_SWITCH_COOLDOWN_MS_INT.getDefaultValue()));
+    }
+
+    private boolean isInAcquireCooldown(String emulatorNumber) {
+        Long notBefore = emulatorAcquireNotBefore.get(emulatorNumber);
+        return notBefore != null && System.currentTimeMillis() < notBefore;
+    }
+
+    private long remainingAcquireCooldownMs(String emulatorNumber) {
+        Long notBefore = emulatorAcquireNotBefore.get(emulatorNumber);
+        if (notBefore == null) {
+            return 0;
+        }
+        return Math.max(0, notBefore - System.currentTimeMillis());
+    }
+
     public void adquireEmulatorSlot(DTOProfiles profile, PositionCallback callback) throws InterruptedException {
         Thread currentThread = Thread.currentThread();
         String emulatorNumber = profile.getEmulatorNumber();
@@ -784,11 +806,12 @@ public class EmulatorManager {
 
             // Check for emulator conflict first
             boolean hasConflict = hasEmulatorConflict(emulatorNumber, currentThread);
+                boolean inAcquireCooldown = isInAcquireCooldown(emulatorNumber);
             logger.info("Profile {} (emulator {}) is requesting queue slot.", profile.getName(), emulatorNumber);
             
             // If slot available and no conflict, acquire immediately (regardless of queue state)
             // This allows different emulators to run concurrently without unnecessary queuing
-            if (activeSlots.size() < MAX_RUNNING_EMULATORS && !hasConflict) {
+                if (activeSlots.size() < MAX_RUNNING_EMULATORS && !hasConflict && !inAcquireCooldown) {
                 logger.info("Profile {} (emulator {}) acquired slot immediately (slot available, no conflict).", 
                         profile.getName(), emulatorNumber);
                 logger.debug("Current slot holders: " + activeSlots);
@@ -805,6 +828,9 @@ public class EmulatorManager {
             if (hasConflict) {
                 logger.info("Profile {} (emulator {}) conflicts with active profile, queuing...", 
                         profile.getName(), emulatorNumber);
+            } else if (inAcquireCooldown) {
+                logger.info("Profile {} (emulator {}) waiting cooldown before reconnect: {} ms", 
+                        profile.getName(), emulatorNumber, remainingAcquireCooldownMs(emulatorNumber));
             } else {
                 logger.info("Profile {} (emulator {}) queuing (no slots available: {}/{})", 
                         profile.getName(), emulatorNumber, activeSlots.size(), MAX_RUNNING_EMULATORS);
@@ -820,12 +846,14 @@ public class EmulatorManager {
                 boolean isHead = waitingQueue.peek() == currentWaiting;
                 boolean slotsAvailable = activeSlots.size() < MAX_RUNNING_EMULATORS;
                 boolean noConflict = !hasEmulatorConflict(emulatorNumber, currentThread);
+                boolean cooldownExpired = !isInAcquireCooldown(emulatorNumber);
                 boolean headHasConflict = isHead ? false : hasEmulatorConflict(waitingQueue.peek().getEmulatorNumber(), waitingQueue.peek().getThread());
 
                 // Can acquire if:
                 // 1. Is head of queue AND slots available AND no conflict (maintains priority), OR
                 // 2. Head has conflict AND slots available AND no conflict (opportunistic)
-                if ((isHead && slotsAvailable && noConflict) || (!isHead && headHasConflict && slotsAvailable && noConflict)) {
+                if (((isHead && slotsAvailable && noConflict) || (!isHead && headHasConflict && slotsAvailable && noConflict))
+                        && cooldownExpired) {
                     break;
                 }
 
@@ -878,6 +906,12 @@ public class EmulatorManager {
                 if (emulatorNumber != null) {
                     emulatorToThread.remove(emulatorNumber);
                     threadToEmulator.remove(currentThread);
+
+                    long cooldownMs = Math.max(0, getProfileSwitchCooldownMs());
+                    if (cooldownMs > 0) {
+                        emulatorAcquireNotBefore.put(emulatorNumber, System.currentTimeMillis() + cooldownMs);
+                        logger.info("Profile switch cooldown set for emulator {}: {} ms", emulatorNumber, cooldownMs);
+                    }
                     
                     // Check if same-account profiles are waiting
                     WaitingThread nextSameAccount = findNextSameAccountProfile(emulatorNumber);
@@ -917,6 +951,7 @@ public class EmulatorManager {
             activeSlots.clear(); // Clear the set of active slots
             emulatorToThread.clear();
             threadToEmulator.clear();
+            emulatorAcquireNotBefore.clear();
             permitsAvailable.signalAll();
         } finally {
             lock.unlock();
