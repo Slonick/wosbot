@@ -118,6 +118,14 @@
     -fx-border-style: solid;
 }
 
+/* Sidebar Bottom Footer */
+.sidebar-footer {
+    -fx-background-color: #12151c;
+    -fx-border-color: #222631 transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 12 10 16 10;
+}
+
 /* ---------------------------------------------------------------------------
  * NAVIGATION ITEM (Pill shape, yellow active)
  * --------------------------------------------------------------------------- */
@@ -133,7 +141,7 @@
     -fx-background-radius: 6;
     -fx-padding: 9 10;
     -fx-cursor: hand;
-    -fx-text-fill: #b4b9c1;
+    -fx-text-fill: #e2e8f0;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
     -fx-alignment: CENTER_LEFT;
@@ -143,7 +151,7 @@
 }
 
 .nav-button .label {
-    -fx-text-fill: #b4b9c1;
+    -fx-text-fill: #e2e8f0;
     -fx-font-size: 13px;
     -fx-font-weight: bold;
 }
@@ -175,7 +183,7 @@
 
 /* Icon colors */
 .nav-button .ikonli-font-icon {
-    -fx-icon-color: #636a75;
+    -fx-icon-color: #94a3b8;
     -fx-icon-size: 14;
 }
 

@@ -38,7 +38,7 @@
         <VBox styleClass="nav-sidebar">
 
             <!-- App Header (Logo / Title String) -->
-        <VBox fx:id="sidebarHeader" alignment="CENTER" spacing="22" style="-fx-padding: 24 16 28 16;">
+            <VBox fx:id="sidebarHeader" alignment="CENTER" spacing="14" style="-fx-padding: 20 16 16 16;">
                 <VBox fx:id="logoContainer" alignment="CENTER" style="-fx-cursor: hand; -fx-padding: 0;" maxWidth="1.7976931348623157E308">
                     <ImageView preserveRatio="true" fitWidth="158">
                         <image>
@@ -49,7 +49,7 @@
 
                 <!-- Profile Selector moved immediately below logo -->
                 <VBox alignment="CENTER" spacing="8" maxWidth="1.7976931348623157E308">
-                    <Label text="Loaded profile" style="-fx-text-fill: #9eaab6; -fx-font-size: 13px; -fx-font-weight: bold;" />
+                    <Label text="Loaded profile" style="-fx-text-fill: #e2e8f0; -fx-font-size: 13px; -fx-font-weight: bold;" />
                     <ComboBox fx:id="profileComboBox" maxWidth="1.7976931348623157E308" />
                 </VBox>
 
@@ -67,10 +67,8 @@
                 <VBox fx:id="buttonsContainer" styleClass="nav-button-container" spacing="8" />
             </ScrollPane>
 
-            <Separator styleClass="sidebar-divider" />
-
             <!-- Pinned Navigation Buttons -->
-            <VBox fx:id="pinnedButtonsContainer" styleClass="nav-button-container" spacing="8" style="-fx-padding: 0 0 16 0;" />
+            <VBox fx:id="pinnedButtonsContainer" styleClass="sidebar-footer" spacing="8" />
 
         </VBox>
     </left>
