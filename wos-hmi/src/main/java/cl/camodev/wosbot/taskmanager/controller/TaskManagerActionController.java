@@ -114,8 +114,46 @@ public class TaskManagerActionController implements ITaskStatusChangeListener {
 		}
 
 		ServScheduler scheduler = ServScheduler.getServices();
-		scheduler.updateDailyTaskStatus(profile, task.getTaskEnum(), LocalDateTime.now());
-		scheduler.getQueueManager().getQueue(profile.getId()).executeTaskNow(task.getTaskEnum(), recurring);
+		TaskQueue queue = scheduler.getQueueManager().getQueue(profile.getId());
+		if (queue == null) {
+			showErrorAlert("Error", "No active queue found for profile: " + profile.getName());
+			return;
+		}
+
+		scheduler.updateDailyTaskStatus(profile, task.getTaskEnum(), LocalDateTime.now(), task.getCustomTaskName());
+		
+		if (task.getTaskEnum() == TpDailyTaskEnum.CUSTOM_TASK) {
+			String className = task.getCustomTaskName();
+			cl.camodev.wosbot.serv.impl.CustomTaskService.CustomTaskSettings settings = cl.camodev.wosbot.serv.impl.CustomTaskService.getInstance().getEnabledTasks().stream()
+				.filter(s -> s.getClassName().equals(className))
+				.findFirst().orElse(null);
+			if (settings == null) {
+				showErrorAlert("Error", "Custom task settings not found for: " + className);
+				return;
+			}
+			DelayedTask customTask = cl.camodev.wosbot.serv.impl.CustomTaskService.getInstance().createTaskWithSettings(settings, profile);
+			if (customTask == null) {
+				showErrorAlert("Error", "Could not load custom task: " + className);
+				return;
+			}
+			
+			queue.removeTaskByDistinctKey(className);
+			customTask.reschedule(LocalDateTime.now());
+			customTask.setRecurring(recurring);
+			queue.addTask(customTask);
+			
+			DTOTaskState taskState = new DTOTaskState();
+			taskState.setProfileId(profile.getId());
+			taskState.setTaskId(TpDailyTaskEnum.CUSTOM_TASK.getId());
+			taskState.setCustomTaskName(className);
+			taskState.setScheduled(true);
+			taskState.setExecuting(false);
+			taskState.setLastExecutionTime(LocalDateTime.now());
+			taskState.setNextExecutionTime(customTask.getScheduled());
+			ServTaskManager.getInstance().setTaskState(profile.getId(), taskState);
+		} else {
+			queue.executeTaskNow(task.getTaskEnum(), recurring);
+		}
 	}
 
 	/**
@@ -139,13 +177,12 @@ public class TaskManagerActionController implements ITaskStatusChangeListener {
 
 		if (task.scheduledProperty().get()) {
 			// Task is already scheduled - mark as recurring and execute now
-			scheduleTaskInQueue(queue, task.getTaskEnum(), LocalDateTime.now(), true, profile);
+			scheduleTaskInQueue(queue, task, LocalDateTime.now(), true, profile);
 			ServLogs.getServices().appendLog(EnumTpMessageSeverity.INFO, "TaskExecutor", profile.getName(),
 				"Executed scheduled task " + task.getTaskEnum().getName() + " and marked as recurring");
 		} else {
 			// Task is not scheduled - execute once
-			scheduler.updateDailyTaskStatus(profile, task.getTaskEnum(), LocalDateTime.now());
-			queue.executeTaskNow(task.getTaskEnum(),false);
+			executeTaskNow(task, false);
 			ServLogs.getServices().appendLog(EnumTpMessageSeverity.INFO, "TaskExecutor", profile.getName(),
 				"Executed task " + task.getTaskEnum().getName() + " one time");
 		}
@@ -171,7 +208,7 @@ public class TaskManagerActionController implements ITaskStatusChangeListener {
 		Optional<ButtonType> result = confirmDialog.showAndWait();
 		if (result.isPresent() && result.get() == ButtonType.OK) {
 			ServScheduler scheduler = ServScheduler.getServices();
-			scheduler.removeTaskFromScheduler(profile.getId(), task.getTaskEnum());
+			scheduler.removeTaskFromScheduler(profile.getId(), task.getTaskEnum(), task.getCustomTaskName());
 
 			if (onSuccess != null) {
 				onSuccess.run();
@@ -210,6 +247,9 @@ public class TaskManagerActionController implements ITaskStatusChangeListener {
 
 			// Make dialog modal - this prevents interaction with parent window
 			dialogStage.initModality(Modality.APPLICATION_MODAL);
+			
+			// Use transparent style for custom rounded UI
+			dialogStage.initStyle(javafx.stage.StageStyle.TRANSPARENT);
 
 			// Set parent stage if available
 			if (parentStage != null) {
@@ -219,7 +259,10 @@ public class TaskManagerActionController implements ITaskStatusChangeListener {
 			// Configure dialog properties
 			dialogStage.setResizable(false);
 			dialogStage.setAlwaysOnTop(true); // Keep dialog on top
-			dialogStage.setScene(new Scene(root));
+			
+			Scene scene = new Scene(root);
+			scene.setFill(javafx.scene.paint.Color.TRANSPARENT);
+			dialogStage.setScene(scene);
 
 			// Center the dialog
 			dialogStage.centerOnScreen();
@@ -263,11 +306,11 @@ public class TaskManagerActionController implements ITaskStatusChangeListener {
 			return;
 		}
 
-		// Use the existing executeTaskNow method but modify it for scheduled execution
-		scheduleTaskInQueue(queue, task.getTaskEnum(), scheduledTime, recurring, profile);
+		// Use the modified method for scheduled execution
+		scheduleTaskInQueue(queue, task, scheduledTime, recurring, profile);
 
 		// Update the daily task status in the database
-		scheduler.updateDailyTaskStatus(profile, task.getTaskEnum(), scheduledTime);
+		scheduler.updateDailyTaskStatus(profile, task.getTaskEnum(), scheduledTime, task.getCustomTaskName());
 
 		showInfoAlert("Success", "Task scheduled successfully for: " +
 			scheduledTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) +
@@ -277,16 +320,33 @@ public class TaskManagerActionController implements ITaskStatusChangeListener {
 	/**
 	 * Schedules a task in the queue with custom timing and recurrence settings
 	 */
-	private void scheduleTaskInQueue(TaskQueue queue, TpDailyTaskEnum taskEnum, LocalDateTime scheduledTime, boolean recurring, DTOProfiles profile) {
-		// Create a custom implementation similar to executeTaskNow but with scheduled time
-		DelayedTask prototype = DelayedTaskRegistry.create(taskEnum, profile);
-		if (prototype == null) {
-			showErrorAlert("Error", "Task not found: " + taskEnum.getName());
-			return;
+	private void scheduleTaskInQueue(TaskQueue queue, TaskManagerAux task, LocalDateTime scheduledTime, boolean recurring, DTOProfiles profile) {
+		TpDailyTaskEnum taskEnum = task.getTaskEnum();
+		DelayedTask prototype;
+		
+		if (taskEnum == TpDailyTaskEnum.CUSTOM_TASK) {
+			String className = task.getCustomTaskName();
+			cl.camodev.wosbot.serv.impl.CustomTaskService.CustomTaskSettings settings = cl.camodev.wosbot.serv.impl.CustomTaskService.getInstance().getEnabledTasks().stream()
+				.filter(s -> s.getClassName().equals(className))
+				.findFirst().orElse(null);
+			if (settings == null) {
+				showErrorAlert("Error", "Custom task settings not found for: " + className);
+				return;
+			}
+			prototype = cl.camodev.wosbot.serv.impl.CustomTaskService.getInstance().createTaskWithSettings(settings, profile);
+			if (prototype == null) {
+				showErrorAlert("Error", "Task not found/cannot load: " + className);
+				return;
+			}
+			queue.removeTaskByDistinctKey(className);
+		} else {
+			prototype = DelayedTaskRegistry.create(taskEnum, profile);
+			if (prototype == null) {
+				showErrorAlert("Error", "Task not found: " + taskEnum.getName());
+				return;
+			}
+			queue.removeTask(taskEnum);
 		}
-
-		// Remove existing task if it exists
-		queue.removeTask(taskEnum);
 
 		// Schedule the task for the specified time
 		prototype.reschedule(scheduledTime);
@@ -299,6 +359,9 @@ public class TaskManagerActionController implements ITaskStatusChangeListener {
 		DTOTaskState taskState = new DTOTaskState();
 		taskState.setProfileId(profile.getId());
 		taskState.setTaskId(taskEnum.getId());
+		if (taskEnum == TpDailyTaskEnum.CUSTOM_TASK) {
+			taskState.setCustomTaskName(task.getCustomTaskName());
+		}
 		taskState.setScheduled(true);
 		taskState.setExecuting(false);
 		taskState.setLastExecutionTime(LocalDateTime.now());
@@ -306,7 +369,7 @@ public class TaskManagerActionController implements ITaskStatusChangeListener {
 		ServTaskManager.getInstance().setTaskState(profile.getId(), taskState);
 
 		ServLogs.getServices().appendLog(EnumTpMessageSeverity.INFO, "TaskScheduler", profile.getName(),
-			"Scheduled " + taskEnum.getName() + " for " + scheduledTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) +
+			"Scheduled " + (taskEnum == TpDailyTaskEnum.CUSTOM_TASK ? task.getCustomTaskName() : taskEnum.getName()) + " for " + scheduledTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) +
 			(recurring ? " (recurring)" : " (one-time)"));
 	}
 

@@ -8,15 +8,21 @@ public class DTODailyTaskStatus {
 	private Integer idTpDailyTask;
 	private LocalDateTime lastExecution;
 	private LocalDateTime nextSchedule;
+	private String customTaskName;
 
 	public DTODailyTaskStatus() {
 	}
 
 	public DTODailyTaskStatus(Long idProfile, Integer idTpDailyTask, LocalDateTime lastExecution, LocalDateTime nextSchedule) {
+		this(idProfile, idTpDailyTask, lastExecution, nextSchedule, null);
+	}
+
+	public DTODailyTaskStatus(Long idProfile, Integer idTpDailyTask, LocalDateTime lastExecution, LocalDateTime nextSchedule, String customTaskName) {
 		this.lastExecution = lastExecution;
 		this.nextSchedule = nextSchedule;
 		this.idProfile = idProfile;
 		this.idTpDailyTask = idTpDailyTask;
+		this.customTaskName = customTaskName;
 	}
 
 	public Long getIdProfile() {
@@ -49,5 +55,13 @@ public class DTODailyTaskStatus {
 
 	public void setNextSchedule(LocalDateTime nextSchedule) {
 		this.nextSchedule = nextSchedule;
+	}
+
+	public String getCustomTaskName() {
+		return customTaskName;
+	}
+
+	public void setCustomTaskName(String customTaskName) {
+		this.customTaskName = customTaskName;
 	}
 }

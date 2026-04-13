@@ -2,6 +2,8 @@ package cl.camodev.wosbot.emulator;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -538,6 +540,108 @@ public class EmulatorManager {
             // Clear profile name after the search is done
             ImageSearchUtil.clearProfileName();
         }
+    }
+
+    // ========================================================================
+    // CUSTOM FILE-BASED TEMPLATE SEARCH
+    // ========================================================================
+
+    /**
+     * Searches for a custom template loaded from an absolute filesystem path
+     * against the current emulator screen.
+     *
+     * <p>Unlike the {@link EnumTemplates}-based overloads, this method reads the
+     * template image bytes directly from the filesystem at runtime, bypassing
+     * the classpath resource cache. Suitable for templates selected by the user
+     * at runtime via the Task Builder's "Browse…" button.</p>
+     *
+     * @param emulatorNumber Emulator identifier
+     * @param absolutePath   Absolute path to the template image file (PNG/JPG)
+     * @param topLeft        Top-left corner of the search region (use {@code new DTOPoint(0,0)} for full screen)
+     * @param bottomRight    Bottom-right corner of the search region (use {@code new DTOPoint(720,1280)} for full screen)
+     * @param threshold      Match threshold (0-100)
+     * @return Search result with found flag, coordinates and match percentage
+     */
+    public DTOImageSearchResult searchTemplateFromFile(String emulatorNumber, String absolutePath,
+            DTOPoint topLeft, DTOPoint bottomRight, double threshold) {
+        checkEmulatorInitialized();
+        try {
+            byte[] templateBytes = Files.readAllBytes(Path.of(absolutePath));
+            DTORawImage rawImage = captureScreenshotViaADB(emulatorNumber);
+            if (rawImage == null) {
+                logger.warn("searchTemplateFromFile: failed to capture screen for emulator {}", emulatorNumber);
+                return new DTOImageSearchResult(false, null, 0.0);
+            }
+            String profileName = getProfileNameForEmulator(emulatorNumber);
+            ImageSearchUtil.setProfileName(profileName);
+            return ImageSearchUtil.searchTemplateFromBytes(rawImage, templateBytes, topLeft, bottomRight, threshold);
+        } catch (IOException e) {
+            logger.error("searchTemplateFromFile: cannot read template file '{}': {}", absolutePath, e.getMessage());
+            return new DTOImageSearchResult(false, null, 0.0);
+        } finally {
+            ImageSearchUtil.clearProfileName();
+        }
+    }
+
+    /**
+     * Convenience overload of {@link #searchTemplateFromFile} that searches the
+     * full emulator screen (720x1280).
+     *
+     * @param emulatorNumber Emulator identifier
+     * @param absolutePath   Absolute path to the template image file
+     * @param threshold      Match threshold (0-100)
+     * @return Search result
+     */
+    public DTOImageSearchResult searchTemplateFromFile(String emulatorNumber, String absolutePath, double threshold) {
+        return searchTemplateFromFile(emulatorNumber, absolutePath,
+                new DTOPoint(0, 0), new DTOPoint(720, 1280), threshold);
+    }
+
+    /**
+     * Grayscale variant of {@link #searchTemplateFromFile}.
+     * Both the custom template and the screen ROI are converted to grayscale
+     * before matching.
+     *
+     * @param emulatorNumber Emulator identifier
+     * @param absolutePath   Absolute path to the template image file
+     * @param topLeft        Top-left corner of the search region
+     * @param bottomRight    Bottom-right corner of the search region
+     * @param threshold      Match threshold (0-100)
+     * @return Search result
+     */
+    public DTOImageSearchResult searchTemplateGrayscaleFromFile(String emulatorNumber, String absolutePath,
+            DTOPoint topLeft, DTOPoint bottomRight, double threshold) {
+        checkEmulatorInitialized();
+        try {
+            byte[] templateBytes = Files.readAllBytes(Path.of(absolutePath));
+            DTORawImage rawImage = captureScreenshotViaADB(emulatorNumber);
+            if (rawImage == null) {
+                logger.warn("searchTemplateGrayscaleFromFile: failed to capture screen for emulator {}", emulatorNumber);
+                return new DTOImageSearchResult(false, null, 0.0);
+            }
+            String profileName = getProfileNameForEmulator(emulatorNumber);
+            ImageSearchUtil.setProfileName(profileName);
+            return ImageSearchUtil.searchTemplateGrayscaleFromBytes(rawImage, templateBytes, topLeft, bottomRight, threshold);
+        } catch (IOException e) {
+            logger.error("searchTemplateGrayscaleFromFile: cannot read template file '{}': {}", absolutePath, e.getMessage());
+            return new DTOImageSearchResult(false, null, 0.0);
+        } finally {
+            ImageSearchUtil.clearProfileName();
+        }
+    }
+
+    /**
+     * Convenience overload of {@link #searchTemplateGrayscaleFromFile} for full screen.
+     *
+     * @param emulatorNumber Emulator identifier
+     * @param absolutePath   Absolute path to the template image file
+     * @param threshold      Match threshold (0-100)
+     * @return Search result
+     */
+    public DTOImageSearchResult searchTemplateGrayscaleFromFile(String emulatorNumber, String absolutePath,
+            double threshold) {
+        return searchTemplateGrayscaleFromFile(emulatorNumber, absolutePath,
+                new DTOPoint(0, 0), new DTOPoint(720, 1280), threshold);
     }
 
     /**

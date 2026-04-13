@@ -10,6 +10,7 @@ public class DTOTaskState {
 	private boolean executing;
 	private LocalDateTime lastExecutionTime;
 	private LocalDateTime nextExecutionTime;
+	private String customTaskName;
 
 	public DTOTaskState() {
 	}
@@ -60,6 +61,14 @@ public class DTOTaskState {
 
 	public void setNextExecutionTime(LocalDateTime nextExecutionTime) {
 		this.nextExecutionTime = nextExecutionTime;
+	}
+
+	public String getCustomTaskName() {
+		return customTaskName;
+	}
+
+	public void setCustomTaskName(String customTaskName) {
+		this.customTaskName = customTaskName;
 	}
 
 }

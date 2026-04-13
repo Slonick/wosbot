@@ -40,6 +40,9 @@ public class DailyTask {
 	@Column(name = "next_schedule", nullable = false)
 	private LocalDateTime nextSchedule;
 
+	@Column(name = "custom_task_name", nullable = true)
+	private String customTaskName;
+
 	// Constructor vacío
 	public DailyTask() {
 	}
@@ -91,5 +94,13 @@ public class DailyTask {
 
 	public void setNextSchedule(LocalDateTime nextSchedule) {
 		this.nextSchedule = nextSchedule;
+	}
+
+	public String getCustomTaskName() {
+		return customTaskName;
+	}
+
+	public void setCustomTaskName(String customTaskName) {
+		this.customTaskName = customTaskName;
 	}
 }

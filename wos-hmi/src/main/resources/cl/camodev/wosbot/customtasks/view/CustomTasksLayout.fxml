@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      spacing="0" styleClass="custom-tasks-root"
+      VBox.vgrow="ALWAYS" HBox.hgrow="ALWAYS">
+
+    <!-- Header toolbar -->
+    <HBox alignment="CENTER_LEFT" spacing="12" styleClass="custom-tasks-toolbar">
+        <padding><Insets top="14" right="18" bottom="14" left="18"/></padding>
+
+        <FontIcon fx:id="headerIcon" iconLiteral="mdi2p-puzzle-outline" iconSize="20"
+                  styleClass="custom-tasks-header-icon"/>
+        <Label text="Custom Tasks" styleClass="custom-tasks-title"/>
+
+        <Region HBox.hgrow="ALWAYS"/>
+
+        <Button fx:id="btnImportTask" onAction="#handleImportTask"
+                styleClass="custom-tasks-import-btn">
+            <graphic>
+                <HBox alignment="CENTER" spacing="6">
+                    <FontIcon iconLiteral="mdi2f-file-import-outline" iconSize="16"
+                              style="-fx-icon-color: #ffffff;"/>
+                    <Label text="Import .java" style="-fx-text-fill: #ffffff; -fx-font-weight: bold; -fx-font-size: 12px;"/>
+                </HBox>
+            </graphic>
+        </Button>
+    </HBox>
+
+    <!-- Separator -->
+    <Separator styleClass="custom-tasks-separator"/>
+
+    <!-- Task cards container -->
+    <ScrollPane fx:id="tasksScrollPane" fitToWidth="true"
+                VBox.vgrow="ALWAYS" styleClass="custom-tasks-scroll">
+        <VBox fx:id="taskCardsContainer" spacing="12" styleClass="custom-tasks-cards-container">
+            <padding><Insets top="16" right="18" bottom="16" left="18"/></padding>
+
+            <!-- Empty state placeholder (hidden when cards exist) -->
+            <VBox fx:id="emptyState" alignment="CENTER" spacing="12"
+                  styleClass="custom-tasks-empty-state"
+                  VBox.vgrow="ALWAYS">
+                <padding><Insets top="60" bottom="60"/></padding>
+                <FontIcon iconLiteral="mdi2p-puzzle-plus-outline" iconSize="48"
+                          style="-fx-icon-color: #3a3a5c;"/>
+                <Label text="No Custom Tasks" style="-fx-text-fill: #636a75; -fx-font-size: 16px; -fx-font-weight: bold;"/>
+                <Label text="Import a .java file from the Task Builder to get started"
+                       style="-fx-text-fill: #4a4a6a; -fx-font-size: 13px;"
+                       wrapText="true" textAlignment="CENTER" maxWidth="300"/>
+            </VBox>
+        </VBox>
+    </ScrollPane>
+
+    <!-- Status bar -->
+    <HBox alignment="CENTER_LEFT" spacing="8" styleClass="custom-tasks-status-bar">
+        <padding><Insets top="8" right="18" bottom="8" left="18"/></padding>
+        <FontIcon iconLiteral="mdi2i-information-outline" iconSize="14"
+                  style="-fx-icon-color: #4a4a6a;"/>
+        <Label fx:id="statusLabel" text="Ready"
+               style="-fx-text-fill: #636a75; -fx-font-size: 11px;"/>
+    </HBox>
+</VBox>

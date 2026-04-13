@@ -227,6 +227,188 @@ public class ImageSearchUtil {
 				bottomRightCorner, thresholdPercentage, maxResults);
 	}
 
+	// ========================================================================
+	// CUSTOM FILE-BASED TEMPLATE SEARCH (bypasses classpath resource cache)
+	// ========================================================================
+
+	/**
+	 * Searches for a template provided as raw bytes (e.g. loaded from an
+	 * absolute filesystem path) against a captured emulator screen image.
+	 *
+	 * <p>This bypasses the classpath resource cache entirely; the template Mat is
+	 * decoded on-the-fly from the supplied bytes. The result is NOT cached.</p>
+	 *
+	 * @param rawImage      Raw emulator screenshot
+	 * @param templateBytes PNG/JPG bytes of the custom template image
+	 * @param topLeft       Top-left corner of the search region
+	 * @param bottomRight   Bottom-right corner of the search region
+	 * @param threshold     Match threshold (0-100)
+	 * @return Search result with found flag, coordinates and match percentage
+	 */
+	public static DTOImageSearchResult searchTemplateFromBytes(DTORawImage rawImage, byte[] templateBytes,
+			DTOPoint topLeft, DTOPoint bottomRight, double threshold) {
+
+		Mat imagenPrincipal = null;
+		Mat template = null;
+		Mat imagenROI = null;
+		Mat resultado = null;
+
+		try {
+			// Decode template from supplied bytes
+			MatOfByte mob = new MatOfByte(templateBytes);
+			template = Imgcodecs.imdecode(mob, Imgcodecs.IMREAD_COLOR);
+			if (template == null || template.empty()) {
+				logger.error(formatLogMessage("searchTemplateFromBytes: could not decode template bytes"));
+				return new DTOImageSearchResult(false, null, 0.0);
+			}
+
+			// Convert screen raw data to Mat
+			imagenPrincipal = convertRawDataToMat(rawImage.getData(), rawImage.getWidth(), rawImage.getHeight(),
+					rawImage.getBpp());
+			if (imagenPrincipal.empty()) {
+				return new DTOImageSearchResult(false, null, 0.0);
+			}
+
+			// Clamp ROI to image bounds
+			int roiX = Math.max(0, topLeft.getX());
+			int roiY = Math.max(0, topLeft.getY());
+			int roiW = Math.min(bottomRight.getX(), imagenPrincipal.cols()) - roiX;
+			int roiH = Math.min(bottomRight.getY(), imagenPrincipal.rows()) - roiY;
+
+			if (roiW <= 0 || roiH <= 0) {
+				return new DTOImageSearchResult(false, null, 0.0);
+			}
+
+			int resultCols = roiW - template.cols() + 1;
+			int resultRows = roiH - template.rows() + 1;
+			if (resultCols <= 0 || resultRows <= 0) {
+				return new DTOImageSearchResult(false, null, 0.0);
+			}
+
+			Rect roi = new Rect(roiX, roiY, roiW, roiH);
+			imagenROI = new Mat(imagenPrincipal, roi);
+			resultado = new Mat(resultRows, resultCols, CvType.CV_32FC1);
+			Imgproc.matchTemplate(imagenROI, template, resultado, Imgproc.TM_CCOEFF_NORMED);
+
+			Core.MinMaxLocResult mmr = Core.minMaxLoc(resultado);
+			double normalizedVal = Math.max(-1.0, Math.min(1.0, mmr.maxVal));
+			if (Double.isNaN(normalizedVal) || Double.isInfinite(normalizedVal)) {
+				return new DTOImageSearchResult(false, null, 0.0);
+			}
+			double matchPct = normalizedVal * 100.0;
+
+			if (matchPct < threshold) {
+				logger.info(formatLogMessage(
+						"Custom template (bytes): NOT FOUND (match: " + String.format("%.2f", matchPct) + "%)"));
+				return new DTOImageSearchResult(false, null, matchPct);
+			}
+
+			int centerX = (int) (mmr.maxLoc.x + roi.x + template.cols() / 2.0);
+			int centerY = (int) (mmr.maxLoc.y + roi.y + template.rows() / 2.0);
+			logger.info(formatLogMessage("Custom template (bytes): FOUND at (" + centerX + "," + centerY
+					+ ") match: " + String.format("%.2f", matchPct) + "%"));
+			return new DTOImageSearchResult(true, new DTOPoint(centerX, centerY), matchPct);
+
+		} catch (Exception e) {
+			logger.error(formatLogMessage("searchTemplateFromBytes: exception during search"), e);
+			return new DTOImageSearchResult(false, null, 0.0);
+		} finally {
+			if (imagenPrincipal != null) imagenPrincipal.release();
+			if (template != null) template.release();
+			if (imagenROI != null) imagenROI.release();
+			if (resultado != null) resultado.release();
+		}
+	}
+
+	/**
+	 * Grayscale variant of {@link #searchTemplateFromBytes}. Both the template
+	 * and the screen ROI are converted to grayscale before matching.
+	 *
+	 * @param rawImage      Raw emulator screenshot
+	 * @param templateBytes PNG/JPG bytes of the custom template image
+	 * @param topLeft       Top-left corner of the search region
+	 * @param bottomRight   Bottom-right corner of the search region
+	 * @param threshold     Match threshold (0-100)
+	 * @return Search result with found flag, coordinates and match percentage
+	 */
+	public static DTOImageSearchResult searchTemplateGrayscaleFromBytes(DTORawImage rawImage, byte[] templateBytes,
+			DTOPoint topLeft, DTOPoint bottomRight, double threshold) {
+
+		Mat imagenPrincipal = null;
+		Mat template = null;
+		Mat grayTemplate = null;
+		Mat grayROI = null;
+		Mat imagenROI = null;
+		Mat resultado = null;
+
+		try {
+			MatOfByte mob = new MatOfByte(templateBytes);
+			template = Imgcodecs.imdecode(mob, Imgcodecs.IMREAD_COLOR);
+			if (template == null || template.empty()) {
+				logger.error(formatLogMessage("searchTemplateGrayscaleFromBytes: could not decode template bytes"));
+				return new DTOImageSearchResult(false, null, 0.0);
+			}
+
+			grayTemplate = new Mat();
+			Imgproc.cvtColor(template, grayTemplate, Imgproc.COLOR_BGR2GRAY);
+
+			imagenPrincipal = convertRawDataToMat(rawImage.getData(), rawImage.getWidth(), rawImage.getHeight(),
+					rawImage.getBpp());
+			if (imagenPrincipal.empty()) {
+				return new DTOImageSearchResult(false, null, 0.0);
+			}
+
+			int roiX = Math.max(0, topLeft.getX());
+			int roiY = Math.max(0, topLeft.getY());
+			int roiW = Math.min(bottomRight.getX(), imagenPrincipal.cols()) - roiX;
+			int roiH = Math.min(bottomRight.getY(), imagenPrincipal.rows()) - roiY;
+
+			if (roiW <= 0 || roiH <= 0) {
+				return new DTOImageSearchResult(false, null, 0.0);
+			}
+
+			int resultCols = roiW - grayTemplate.cols() + 1;
+			int resultRows = roiH - grayTemplate.rows() + 1;
+			if (resultCols <= 0 || resultRows <= 0) {
+				return new DTOImageSearchResult(false, null, 0.0);
+			}
+
+			Rect roi = new Rect(roiX, roiY, roiW, roiH);
+			imagenROI = new Mat(imagenPrincipal, roi);
+			grayROI = new Mat();
+			Imgproc.cvtColor(imagenROI, grayROI, Imgproc.COLOR_BGR2GRAY);
+
+			resultado = new Mat(resultRows, resultCols, CvType.CV_32FC1);
+			Imgproc.matchTemplate(grayROI, grayTemplate, resultado, Imgproc.TM_CCOEFF_NORMED);
+
+			Core.MinMaxLocResult mmr = Core.minMaxLoc(resultado);
+			double normalizedVal = Math.max(-1.0, Math.min(1.0, mmr.maxVal));
+			if (Double.isNaN(normalizedVal) || Double.isInfinite(normalizedVal)) {
+				return new DTOImageSearchResult(false, null, 0.0);
+			}
+			double matchPct = normalizedVal * 100.0;
+
+			if (matchPct < threshold) {
+				return new DTOImageSearchResult(false, null, matchPct);
+			}
+
+			int centerX = (int) (mmr.maxLoc.x + roi.x + grayTemplate.cols() / 2.0);
+			int centerY = (int) (mmr.maxLoc.y + roi.y + grayTemplate.rows() / 2.0);
+			return new DTOImageSearchResult(true, new DTOPoint(centerX, centerY), matchPct);
+
+		} catch (Exception e) {
+			logger.error(formatLogMessage("searchTemplateGrayscaleFromBytes: exception during search"), e);
+			return new DTOImageSearchResult(false, null, 0.0);
+		} finally {
+			if (imagenPrincipal != null) imagenPrincipal.release();
+			if (template != null) template.release();
+			if (grayTemplate != null) grayTemplate.release();
+			if (imagenROI != null) imagenROI.release();
+			if (grayROI != null) grayROI.release();
+			if (resultado != null) resultado.release();
+		}
+	}
+
 	/**
 	 * Optimized method for loading and caching templates.
 	 */

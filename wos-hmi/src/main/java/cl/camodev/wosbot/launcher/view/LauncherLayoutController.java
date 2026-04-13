@@ -59,6 +59,8 @@ import cl.camodev.wosbot.training.view.TrainingLayoutController;
 import cl.camodev.wosbot.research.view.ResearchLayoutController;
 import cl.camodev.wosbot.character.view.CharacterLayoutController;
 import cl.camodev.wosbot.statistics.view.StatisticsLayoutController;
+import cl.camodev.wosbot.taskbuilder.view.TaskBuilderLayoutController;
+import cl.camodev.wosbot.customtasks.view.CustomTasksLayoutController;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -92,6 +94,7 @@ import org.kordamp.ikonli.materialdesign2.MaterialDesignP;
 import org.kordamp.ikonli.materialdesign2.MaterialDesignB;
 import org.kordamp.ikonli.materialdesign2.MaterialDesignH;
 import org.kordamp.ikonli.materialdesign2.MaterialDesignV;
+import org.kordamp.ikonli.materialdesign2.MaterialDesignW;
 import org.kordamp.ikonli.Ikon;
 
 public class LauncherLayoutController implements IProfileLoadListener, IStaminaChangeListener {
@@ -149,6 +152,9 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
     private HBox discordBubbleContainer;
 
     @FXML
+    private HBox coffeeBubbleContainer;
+
+    @FXML
     private FontIcon iconDiscord;
 
     @FXML
@@ -158,10 +164,21 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
     private FontIcon iconDiscordBubble;
 
     @FXML
+    private FontIcon iconCoffeeBubble;
+
+    @FXML
     private void handleCloseDiscordBubble(ActionEvent event) {
         if (discordBubbleContainer != null) {
             discordBubbleContainer.setVisible(false);
             discordBubbleContainer.setManaged(false);
+        }
+    }
+
+    @FXML
+    private void handleCloseCoffeeBubble(ActionEvent event) {
+        if (coffeeBubbleContainer != null) {
+            coffeeBubbleContainer.setVisible(false);
+            coffeeBubbleContainer.setManaged(false);
         }
     }
 
@@ -220,8 +237,23 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
         if (iconDiscordBubble != null) {
             iconDiscordBubble.setIconCode(MaterialDesignD.DISCORD);
         }
+        if (iconCoffeeBubble != null) {
+            iconCoffeeBubble.setIconCode(MaterialDesignC.COFFEE);
+        }
         if (iconGithub != null) {
             iconGithub.setIconCode(MaterialDesignG.GITHUB);
+        }
+
+        if (java.util.concurrent.ThreadLocalRandom.current().nextBoolean()) {
+            if (discordBubbleContainer != null) {
+                discordBubbleContainer.setVisible(false);
+                discordBubbleContainer.setManaged(false);
+            }
+        } else {
+            if (coffeeBubbleContainer != null) {
+                coffeeBubbleContainer.setVisible(false);
+                coffeeBubbleContainer.setManaged(false);
+            }
         }
     }
 
@@ -410,14 +442,16 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
     // ==================== PINNED MODULES ====================
 
     private void initializePinnedModules() {
-        // Control tab: Logs + Profiles + Task Manager
+        // Control tab: Logs + Profiles + Task Manager + Custom Tasks
         ConsoleLogLayoutController logsCtrl = consoleLogLayoutController;
         ProfileManagerLayoutController profilesCtrl = profileManagerLayoutController;
         TaskManagerLayoutController taskCtrl = new TaskManagerLayoutController();
+        CustomTasksLayoutController customTasksCtrl = new CustomTasksLayoutController();
 
         Parent logsPane = loadNode("ConsoleLogLayout", logsCtrl);
         Parent profilesPane = loadNode("ProfileManagerLayout", profilesCtrl);
         Parent taskPane = loadNode("TaskManagerLayout", taskCtrl);
+        Parent customTasksPane = loadNode("CustomTasksLayout", customTasksCtrl);
 
         // Show Logs by default on startup
         setMainContent(logsPane);
@@ -427,7 +461,8 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
         controlTabs.getTabs().addAll(
                 makeTab("Logs", logsPane),
                 makeTab("Profiles", profilesPane),
-                makeTab("Tasks", taskPane)
+                makeTab("Tasks", taskPane),
+                makeTab("Custom Tasks", customTasksPane)
         );
         controlTabs.setMaxWidth(Double.MAX_VALUE);
         controlTabs.setMaxHeight(Double.MAX_VALUE);
@@ -564,6 +599,7 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
                 new ModuleDefinition("ChiefOrderLayout",         "Chief Order",          MaterialDesignC.CROWN_OUTLINE,              ChiefOrderLayoutController::new),
                 new ModuleDefinition("GiftcodeLayout",           "Get Giftcodes",        MaterialDesignG.GIFT_OUTLINE,               GiftcodeLayoutController::new),
                 new ModuleDefinition("DebuggingLayout",          "Debugging",            MaterialDesignB.BUG_OUTLINE,                DebuggingLayoutController::new),
+                new ModuleDefinition("TaskBuilderLayout",        "Task Builder",         MaterialDesignW.WRENCH_OUTLINE,             TaskBuilderLayoutController::new),
                 new ModuleDefinition("TelegramLayout",           "Telegram",             MaterialDesignT.TELEGRAM,                   TelegramLayoutController::new),
                 new ModuleDefinition("SkipTutorialLayout",       "Skip Tutorial",        MaterialDesignS.SKIP_NEXT_OUTLINE,          SkipTutorialLayoutController::new),
                 new ModuleDefinition("CharacterLayout",          "Character",            MaterialDesignA.ACCOUNT_OUTLINE,            CharacterLayoutController::new),
@@ -1692,6 +1728,11 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
     @FXML
     private void openDiscord() {
         openWebPage("https://discord.com/invite/sUthSHRVvU");
+    }
+
+    @FXML
+    private void openCoffee() {
+        openWebPage("https://buymeacoffee.com/shederator");
     }
 
     @FXML

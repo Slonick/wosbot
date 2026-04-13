@@ -8,6 +8,7 @@ import cl.camodev.wosbot.ot.DTOTaskState;
 import cl.camodev.wosbot.serv.IProfileDataChangeListener;
 import cl.camodev.wosbot.serv.impl.ServProfiles;
 import cl.camodev.wosbot.serv.impl.ServScheduler;
+import cl.camodev.wosbot.serv.impl.ServTaskManager;
 import cl.camodev.wosbot.serv.task.TaskQueue;
 import cl.camodev.wosbot.taskmanager.controller.TaskManagerActionController;
 import cl.camodev.wosbot.taskmanager.model.TaskManagerAux;
@@ -326,46 +327,72 @@ public class TaskManagerLayoutController implements IProfileDataChangeListener {
 	 * Reloads the task status and, when available, builds the TaskManagerAux list and delivers it to the consumer.
 	 */
 	private void buildTaskManagerList(DTOProfiles profile, Consumer<List<TaskManagerAux>> onListReady) {
-		// Now `statuses` is a List<DTODailyTaskStatus>
 		taskManagerActionController.loadDailyTaskStatus(profile.getId(), (List<DTODailyTaskStatus> statuses) -> {
-			List<TaskManagerAux> list = Arrays.stream(TpDailyTaskEnum.values()).map(task -> {
-				// Search for the status whose ID matches the task ID
-//				System.out.println(">>> statuses.size=" + statuses.size() + "  searching for id=" + task.getId());
+			List<TaskManagerAux> list = new ArrayList<>();
+			
+			// Process standard enum tasks EXCEPT the generic CUSTOM_TASK
+			for (TpDailyTaskEnum task : TpDailyTaskEnum.values()) {
+				if (task == TpDailyTaskEnum.CUSTOM_TASK) continue;
+				list.add(createTaskAux(profile.getId(), task, task.getName(), null, statuses));
+			}
 
-				DTODailyTaskStatus s = statuses.stream().filter(st -> st.getIdTpDailyTask() == task.getId()) // or st.getTaskId()
-						.findFirst().orElse(null);
+			// Process dynamic custom tasks
+			cl.camodev.wosbot.serv.impl.CustomTaskService cts = cl.camodev.wosbot.serv.impl.CustomTaskService.getInstance();
+			for (cl.camodev.wosbot.serv.impl.CustomTaskService.CustomTaskSettings ct : cts.getEnabledTasks()) {
+				list.add(createTaskAux(profile.getId(), TpDailyTaskEnum.CUSTOM_TASK, ct.getCustomName(), ct.getClassName(), statuses));
+			}
 
-				if (s == null) {
-					return new TaskManagerAux(task.getName(), null, null, task, profile.getId(), Long.MAX_VALUE, false, false, false);
-				}
-
-				long diffInSeconds = Long.MAX_VALUE;
-				boolean ready = false;
-				if (s.getNextSchedule() != null) {
-					diffInSeconds = ChronoUnit.SECONDS.between(LocalDateTime.now(), s.getNextSchedule());
-					if (diffInSeconds <= 0) {
-						ready = true;
-						diffInSeconds = 0;
-					}
-				}
-
-				boolean scheduled = Optional.ofNullable(ServScheduler.getServices().getQueueManager().getQueue(profile.getId())).map(q -> q.isTaskScheduled(task)).orElse(false);
-
-				return new TaskManagerAux(task.getName(), s.getLastExecution(), s.getNextSchedule(), task, profile.getId(), diffInSeconds, ready, scheduled, false);
-			}).sorted((a, b) -> {
-				if (a.isScheduled() && !b.isScheduled())
-					return -1;
-				if (!a.isScheduled() && b.isScheduled())
-					return 1;
-				if (a.hasReadyTask() && !b.hasReadyTask())
-					return -1;
-				if (!a.hasReadyTask() && b.hasReadyTask())
-					return 1;
-				return Long.compare(a.getNearestMinutesUntilExecution(), b.getNearestMinutesUntilExecution());
-			}).collect(Collectors.toList());
-
+			list.sort(TASK_AUX_COMPARATOR);
 			Platform.runLater(() -> onListReady.accept(list));
 		});
+	}
+
+	private TaskManagerAux createTaskAux(Long profileId, TpDailyTaskEnum task, String taskName, String customTaskName, List<DTODailyTaskStatus> statuses) {
+		// First try to get live state from memory, which fully supports custom tasks by name
+		DTOTaskState liveState = ServTaskManager.getInstance().getTaskState(profileId, task.getId(), customTaskName);
+		if (liveState != null) {
+			long diffInSeconds = Long.MAX_VALUE;
+			boolean ready = false;
+			if (liveState.getNextExecutionTime() != null) {
+				diffInSeconds = ChronoUnit.SECONDS.between(LocalDateTime.now(), liveState.getNextExecutionTime());
+				if (diffInSeconds <= 0) {
+					ready = true;
+					diffInSeconds = 0;
+				}
+			}
+			return new TaskManagerAux(taskName, liveState.getLastExecutionTime(), liveState.getNextExecutionTime(), 
+					task, profileId, diffInSeconds, ready, liveState.isScheduled(), liveState.isExecuting(), customTaskName);
+		}
+
+		// Fallback to database states for standard tasks (this is inaccurate for custom tasks because they all share DB id 500 without a name)
+		DTODailyTaskStatus s = statuses.stream().filter(st -> st.getIdTpDailyTask() == task.getId())
+				.findFirst().orElse(null);
+
+		if (s == null) {
+			return new TaskManagerAux(taskName, null, null, task, profileId, Long.MAX_VALUE, false, false, false, customTaskName);
+		}
+
+		long diffInSeconds = Long.MAX_VALUE;
+		boolean ready = false;
+		if (s.getNextSchedule() != null) {
+			diffInSeconds = ChronoUnit.SECONDS.between(LocalDateTime.now(), s.getNextSchedule());
+			if (diffInSeconds <= 0) {
+				ready = true;
+				diffInSeconds = 0;
+			}
+		}
+
+		boolean scheduled = false;
+		TaskQueue queue = ServScheduler.getServices().getQueueManager().getQueue(profileId);
+		if (queue != null) {
+			if (customTaskName != null) {
+				scheduled = queue.isTaskScheduled(customTaskName);
+			} else {
+				scheduled = queue.isTaskScheduled(task);
+			}
+		}
+
+		return new TaskManagerAux(taskName, s.getLastExecution(), s.getNextSchedule(), task, profileId, diffInSeconds, ready, scheduled, false, customTaskName);
 	}
 
 	private TableView<TaskManagerAux> createTaskTable() {
@@ -389,6 +416,7 @@ public class TaskManagerLayoutController implements IProfileDataChangeListener {
 			@Override
 			protected void updateItem(String item, boolean empty) {
 				super.updateItem(item, empty);
+				graphicProperty().unbind();
 				if (empty || item == null) {
 					setText(null);
 					setGraphic(null);
@@ -398,9 +426,9 @@ public class TaskManagerLayoutController implements IProfileDataChangeListener {
 					// Get the current row's object
 					TaskManagerAux task = getTableRow().getItem();
 					if (task != null) {
-						// Choose the icon based on the boolean property
-                        ImageView iv = getTaskStatusIcon(task, imageView);
-                        setGraphic(iv);
+						// Bind the graphic to task states and time so it updates seamlessly
+						graphicProperty().bind(Bindings.createObjectBinding(() -> getTaskStatusIcon(task, imageView)
+						, task.scheduledProperty(), task.executingProperty(), task.hasReadyTaskProperty(), globalClock));
 						setContentDisplay(ContentDisplay.LEFT);
 					} else {
 						setGraphic(null);
@@ -530,21 +558,21 @@ public class TaskManagerLayoutController implements IProfileDataChangeListener {
 				
 				FontIcon iconSchedule = new FontIcon("mdi2h-history");
 				iconSchedule.setIconSize(16);
-				iconSchedule.setStyle("-fx-icon-color: #ffce54;"); // gold
+				iconSchedule.setIconColor(Color.web("#ffce54")); // gold
 				btnSchedule.setGraphic(iconSchedule);
 				btnSchedule.getStyleClass().add("action-icon-button");
 				btnSchedule.setTooltip(new Tooltip("Schedule Task"));
 
 				FontIcon iconRemove = new FontIcon("mdi2c-close");
 				iconRemove.setIconSize(16);
-				iconRemove.setStyle("-fx-icon-color: #f85149;"); // red
+				iconRemove.setIconColor(Color.web("#f85149")); // red
 				btnRemove.setGraphic(iconRemove);
 				btnRemove.getStyleClass().add("action-icon-button");
 				btnRemove.setTooltip(new Tooltip("Remove Task"));
 
-				FontIcon iconExecute = new FontIcon("mdi2p-play-outline");
-				iconExecute.setIconSize(16);
-				iconExecute.setStyle("-fx-icon-color: #2ea043;"); // green
+				FontIcon iconExecute = new FontIcon("mdi2p-play");
+				iconExecute.setIconSize(22);
+				iconExecute.setIconColor(Color.web("#2ea043")); // green
 				btnExecute.setGraphic(iconExecute);
 				btnExecute.getStyleClass().add("action-icon-button");
 				btnExecute.setTooltip(new Tooltip("Execute Task"));
@@ -590,25 +618,43 @@ public class TaskManagerLayoutController implements IProfileDataChangeListener {
 			@Override
 			protected void updateItem(Void item, boolean empty) {
 				super.updateItem(item, empty);
+				btnSchedule.disableProperty().unbind();
+				btnRemove.disableProperty().unbind();
+				btnExecute.disableProperty().unbind();
 				if (!empty) {
 					TaskManagerAux task = getTableRow().getItem();
 					if (task != null) {
-						// Check if queue is active for this profile
-						boolean queueActive = ServScheduler.getServices().getQueueManager().getQueue(task.getProfileId()) != null;
+						// Bind UI properties dynamically
+						btnSchedule.disableProperty().bind(Bindings.createBooleanBinding(() -> {
+							return ServScheduler.getServices().getQueueManager().getQueue(task.getProfileId()) == null;
+						}, globalClock)); // using global clock to tick queue check
+						
+						// Use listeners instead of bindings for iconColor to avoid CSS conflicts
+						FontIcon scheduleIcon = (FontIcon) btnSchedule.getGraphic();
+						scheduleIcon.setIconColor(Color.web(btnSchedule.isDisable() ? "#3b3f4c" : "#ffce54"));
+						btnSchedule.disableProperty().addListener((obs, oldVal, newVal) ->
+							scheduleIcon.setIconColor(Color.web(newVal ? "#3b3f4c" : "#ffce54")));
+						
+						btnRemove.disableProperty().bind(Bindings.createBooleanBinding(() -> {
+							boolean canRemove = task.scheduledProperty().get() && !task.executingProperty().get();
+							return !canRemove;
+						}, task.scheduledProperty(), task.executingProperty()));
+						
+						FontIcon removeIcon = (FontIcon) btnRemove.getGraphic();
+						removeIcon.setIconColor(Color.web(btnRemove.isDisable() ? "#3b3f4c" : "#f85149"));
+						btnRemove.disableProperty().addListener((obs, oldVal, newVal) ->
+							removeIcon.setIconColor(Color.web(newVal ? "#3b3f4c" : "#f85149")));
 
-						// Enable/disable schedule button based on queue status
-						btnSchedule.setDisable(!queueActive);
-						((FontIcon) btnSchedule.getGraphic()).setIconColor(Color.web(queueActive ? "#636a75" : "#3b3f4c"));
+						btnExecute.disableProperty().bind(Bindings.createBooleanBinding(() -> {
+							boolean queueActive = ServScheduler.getServices().getQueueManager().getQueue(task.getProfileId()) != null;
+							boolean canExecute = queueActive && !task.executingProperty().get();
+							return !canExecute;
+						}, task.executingProperty(), globalClock));
 
-						// Enable/disable remove button based on task state
-						boolean canRemove = task.scheduledProperty().get() && !task.executingProperty().get();
-						btnRemove.setDisable(!canRemove);
-						((FontIcon) btnRemove.getGraphic()).setIconColor(Color.web(canRemove ? "#f85149" : "#3b3f4c"));
-
-						// Disable execute if queue is inactive or task is executing
-						boolean canExecute = queueActive && !task.executingProperty().get();
-						btnExecute.setDisable(!canExecute);
-						((FontIcon) btnExecute.getGraphic()).setIconColor(Color.web(canExecute ? "#2ea043" : "#3b3f4c"));
+						FontIcon executeIcon = (FontIcon) btnExecute.getGraphic();
+						executeIcon.setIconColor(Color.web(btnExecute.isDisable() ? "#3b3f4c" : "#2ea043"));
+						btnExecute.disableProperty().addListener((obs, oldVal, newVal) ->
+							executeIcon.setIconColor(Color.web(newVal ? "#3b3f4c" : "#2ea043")));
 
 						setGraphic(actionBox);
 					} else {
@@ -671,7 +717,7 @@ public class TaskManagerLayoutController implements IProfileDataChangeListener {
 
     private ImageView getTaskStatusIcon(TaskManagerAux task, ImageView iv) {
         boolean flag = task.scheduledProperty().get();
-        boolean waiting = !task.isExecuting() && !task.hasReadyTask() && task.isScheduled() && ChronoUnit.SECONDS.between(LocalDateTime.now(), task.getNextExecution()) >= 60;
+        boolean waiting = !task.isExecuting() && !task.hasReadyTask() && task.isScheduled() && task.getNextExecution() != null && ChronoUnit.SECONDS.between(LocalDateTime.now(), task.getNextExecution()) >= 60;
         if (waiting) {
             iv.setImage(iconWaiting);
         } else if (flag) {
@@ -690,11 +736,30 @@ public class TaskManagerLayoutController implements IProfileDataChangeListener {
             ObservableList<TaskManagerAux> dataList = tasks.get(profileId);
             if (dataList == null)
                 return;
-            Optional<TaskManagerAux> optionalTask = dataList.stream().filter(aux -> aux.getTaskEnum().getId() == taskNameId).findFirst();
-            if (!optionalTask.isPresent())
-                return;
-
-            TaskManagerAux taskAux = optionalTask.get();
+            Optional<TaskManagerAux> optionalTask = dataList.stream()
+                .filter(aux -> aux.getTaskEnum().getId() == taskNameId &&
+                    (taskState.getCustomTaskName() == null || Objects.equals(aux.getCustomTaskName(), taskState.getCustomTaskName())))
+                .findFirst();
+            TaskManagerAux taskAux;
+            if (!optionalTask.isPresent()) {
+                if (taskNameId == TpDailyTaskEnum.CUSTOM_TASK.getId() && taskState.getCustomTaskName() != null) {
+                    long diffInSeconds = Long.MAX_VALUE;
+                    boolean ready = false;
+                    if (taskState.getNextExecutionTime() != null) {
+                        diffInSeconds = ChronoUnit.SECONDS.between(LocalDateTime.now(), taskState.getNextExecutionTime());
+                        if (diffInSeconds <= 0) {
+                            ready = true;
+                            diffInSeconds = 0;
+                        }
+                    }
+                    taskAux = new TaskManagerAux(taskState.getCustomTaskName(), taskState.getLastExecutionTime(), taskState.getNextExecutionTime(), TpDailyTaskEnum.CUSTOM_TASK, profileId, diffInSeconds, ready, taskState.isScheduled(), taskState.isExecuting(), taskState.getCustomTaskName());
+                    dataList.add(taskAux);
+                } else {
+                    return;
+                }
+            } else {
+                taskAux = optionalTask.get();
+            }
             taskAux.setLastExecution(taskState.getLastExecutionTime());
             taskAux.setNextExecution(taskState.getNextExecutionTime());
             taskAux.setScheduled(taskState.isScheduled());

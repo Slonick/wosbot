@@ -85,6 +85,8 @@ public abstract class DelayedTask implements Runnable, Delayed {
     protected TpDailyTaskEnum tpTask;
     protected boolean shouldUpdateConfig;
     protected boolean isInjecting = false;
+    private Integer customPriority = null;
+    private int repeatIntervalMinutes = 0;
 
     // ========================================================================
     // SERVICE INSTANCES
@@ -154,6 +156,12 @@ public abstract class DelayedTask implements Runnable, Delayed {
         this.eventHelper = new EventHelper(emuManager, EMULATOR_NUMBER, profile);
     }
 
+    private String customTaskIdentifier;
+
+    public void setCustomTaskIdentifier(String identifier) {
+        this.customTaskIdentifier = identifier;
+    }
+
     /**
      * Returns a distinct key for task identification in equals/hashCode.
      * 
@@ -164,6 +172,7 @@ public abstract class DelayedTask implements Runnable, Delayed {
      * @return A unique identifier for this task instance, or null if not needed
      */
     protected Object getDistinctKey() {
+        if (customTaskIdentifier != null) return customTaskIdentifier;
         return null;
     }
 
@@ -576,6 +585,26 @@ public abstract class DelayedTask implements Runnable, Delayed {
 
     public String getTaskName() {
         return taskName;
+    }
+
+    public void setTaskName(String taskName) {
+        this.taskName = taskName;
+    }
+
+    public Integer getCustomPriority() {
+        return customPriority;
+    }
+
+    public void setCustomPriority(Integer customPriority) {
+        this.customPriority = customPriority;
+    }
+
+    public int getRepeatIntervalMinutes() {
+        return repeatIntervalMinutes;
+    }
+
+    public void setRepeatIntervalMinutes(int repeatIntervalMinutes) {
+        this.repeatIntervalMinutes = repeatIntervalMinutes;
     }
 
     public void setProfile(DTOProfiles profile) {

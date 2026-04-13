@@ -16,6 +16,9 @@ public class ScheduleTaskDialogController {
 
     @FXML
     private Label lblTaskName;
+    
+    @FXML
+    private javafx.scene.layout.HBox headerBox;
 
     @FXML
     private CheckBox cbImmediate;
@@ -34,6 +37,9 @@ public class ScheduleTaskDialogController {
     private boolean immediate;
     private boolean recurring;
 
+    private double xOffset = 0;
+    private double yOffset = 0;
+
     public void initialize() {
         // Set up listeners
         cbImmediate.selectedProperty().addListener((obs, oldVal, newVal) -> {
@@ -42,11 +48,29 @@ public class ScheduleTaskDialogController {
                 timeField.clear();
             }
         });
+        
+        // Setup window drag
+        if (headerBox != null) {
+            headerBox.setOnMousePressed(event -> {
+                Stage stage = (Stage) headerBox.getScene().getWindow();
+                xOffset = stage.getX() - event.getScreenX();
+                yOffset = stage.getY() - event.getScreenY();
+            });
+            headerBox.setOnMouseDragged(event -> {
+                Stage stage = (Stage) headerBox.getScene().getWindow();
+                stage.setX(event.getScreenX() + xOffset);
+                stage.setY(event.getScreenY() + yOffset);
+            });
+        }
     }
 
     public void setTask(TaskManagerAux task) {
         // Set task name in header
-        lblTaskName.setText("Schedule: " + task.getTaskEnum().getName());
+        if (task.getTaskEnum() == cl.camodev.wosbot.console.enumerable.TpDailyTaskEnum.CUSTOM_TASK) {
+            lblTaskName.setText("Schedule: " + task.getCustomTaskName());
+        } else {
+            lblTaskName.setText("Schedule: " + task.getTaskEnum().getName());
+        }
 
         // Check if task is already scheduled to determine default behavior
         boolean isTaskScheduled = task.scheduledProperty().get();
@@ -108,6 +132,12 @@ public class ScheduleTaskDialogController {
 
     @FXML
     private void handleCancel() {
+        confirmed = false;
+        closeDialog();
+    }
+    
+    @FXML
+    private void handleClose() {
         confirmed = false;
         closeDialog();
     }

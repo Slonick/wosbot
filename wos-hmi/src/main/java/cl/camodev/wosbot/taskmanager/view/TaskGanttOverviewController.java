@@ -896,62 +896,21 @@ public class TaskGanttOverviewController implements ITaskStatusChangeListener, I
                 existingTasks.forEach(t -> existingTaskMap.put(t.getTaskEnum().getId(), t));
             }
             
-            List<TaskManagerAux> tasks = Arrays.stream(TpDailyTaskEnum.values()).map(task -> {
-                DTODailyTaskStatus s = statuses.stream()
-                    .filter(st -> st.getIdTpDailyTask() == task.getId())
-                    .findFirst().orElse(null);
+            List<TaskManagerAux> tasks = new ArrayList<>();
 
-                if (s == null) {
-                    // Check if existing TaskManagerAux object is available
-                    TaskManagerAux existing = existingTaskMap.get(task.getId());
-                    if (existing != null) {
-                        return existing; // Reuse
-                    }
-                    return new TaskManagerAux(task.getName(), null, null, task, profile.getId(), Long.MAX_VALUE, false, false, false);
-                }
+            cl.camodev.wosbot.serv.impl.CustomTaskService cts = cl.camodev.wosbot.serv.impl.CustomTaskService.getInstance();
+            java.util.Collection<cl.camodev.wosbot.serv.impl.CustomTaskService.CustomTaskSettings> customTasks = cts.getEnabledTasks();
 
-                long diffInSeconds = Long.MAX_VALUE;
-                boolean ready = false;
-                if (s.getNextSchedule() != null) {
-                    diffInSeconds = ChronoUnit.SECONDS.between(LocalDateTime.now(), s.getNextSchedule());
-                    if (diffInSeconds <= 0) {
-                        ready = true;
-                        diffInSeconds = 0;
-                    }
-                }
+            for (TpDailyTaskEnum task : TpDailyTaskEnum.values()) {
+                if (task == TpDailyTaskEnum.CUSTOM_TASK) continue;
+                tasks.add(createTaskAux(profile.getId(), task, task.getName(), null, statuses, existingTaskMap));
+            }
 
-                boolean scheduled = Optional.ofNullable(ServScheduler.getServices().getQueueManager().getQueue(profile.getId()))
-                    .map(q -> q.isTaskScheduled(task)).orElse(false);
+            for (cl.camodev.wosbot.serv.impl.CustomTaskService.CustomTaskSettings ct : customTasks) {
+                tasks.add(createTaskAux(profile.getId(), TpDailyTaskEnum.CUSTOM_TASK, ct.getCustomName(), ct.getClassName(), statuses, existingTaskMap));
+            }
 
-                // Check if task is currently executing via ServTaskManager
-                boolean isExecuting = false;
-                cl.camodev.wosbot.ot.DTOTaskState taskState = cl.camodev.wosbot.serv.impl.ServTaskManager.getInstance()
-                    .getTaskState(profile.getId(), task.getId());
-                if (taskState != null) {
-                    isExecuting = taskState.isExecuting();
-                }
-
-                // Try to reuse and update existing TaskManagerAux object
-                TaskManagerAux existingTask = existingTaskMap.get(task.getId());
-                if (existingTask != null) {
-                    // Update only the values, but keep the object (important for live updates!)
-                    existingTask.setLastExecution(s.getLastExecution());
-                    existingTask.setNextExecution(s.getNextSchedule());
-                    existingTask.setNearestMinutesUntilExecution(diffInSeconds);
-                    existingTask.setHasReadyTask(ready);
-                    existingTask.setScheduled(scheduled);
-                    // Only update isExecuting if it has changed (listener has priority!)
-                    if (existingTask.isExecuting() != isExecuting) {
-                        existingTask.setExecuting(isExecuting);
-                    }
-                    return existingTask;
-                }
-
-                // Create new only if no existing object available
-                return new TaskManagerAux(task.getName(), s.getLastExecution(), s.getNextSchedule(), task, profile.getId(), diffInSeconds, ready, scheduled, isExecuting);
-            })
-            .filter(this::shouldDisplayInTimeline)
-            .collect(Collectors.toList());
+            tasks = tasks.stream().filter(this::shouldDisplayInTimeline).collect(Collectors.toList());
 
             // Store tasks for this profile
             profileTasksMap.put(profile.getId(), tasks);
@@ -961,6 +920,68 @@ public class TaskGanttOverviewController implements ITaskStatusChangeListener, I
                 onComplete.run();
             }
         });
+    }
+
+    private TaskManagerAux createTaskAux(Long profileId, TpDailyTaskEnum task, String taskName, String customTaskName, List<DTODailyTaskStatus> statuses, Map<Integer, TaskManagerAux> existingTaskMap) {
+        DTODailyTaskStatus s = statuses.stream()
+            .filter(st -> st.getIdTpDailyTask() == task.getId())
+            .findFirst().orElse(null);
+
+        if (s == null) {
+            // Check if existing TaskManagerAux object is available
+            TaskManagerAux existing = existingTaskMap.get(task.getId());
+            if (existing != null) {
+                return existing; // Reuse
+            }
+            return new TaskManagerAux(taskName, null, null, task, profileId, Long.MAX_VALUE, false, false, false, customTaskName);
+        }
+
+        long diffInSeconds = Long.MAX_VALUE;
+        boolean ready = false;
+        if (s.getNextSchedule() != null) {
+            diffInSeconds = ChronoUnit.SECONDS.between(LocalDateTime.now(), s.getNextSchedule());
+            if (diffInSeconds <= 0) {
+                ready = true;
+                diffInSeconds = 0;
+            }
+        }
+
+        boolean scheduled = false;
+        cl.camodev.wosbot.serv.task.TaskQueue queue = ServScheduler.getServices().getQueueManager().getQueue(profileId);
+        if (queue != null) {
+            if (customTaskName != null) {
+                scheduled = queue.isTaskScheduled(customTaskName);
+            } else {
+                scheduled = queue.isTaskScheduled(task);
+            }
+        }
+
+        // Check if task is currently executing via ServTaskManager
+        boolean isExecuting = false;
+        cl.camodev.wosbot.ot.DTOTaskState taskState = cl.camodev.wosbot.serv.impl.ServTaskManager.getInstance()
+            .getTaskState(profileId, task.getId(), customTaskName);
+        if (taskState != null) {
+            isExecuting = taskState.isExecuting();
+        }
+
+        // Try to reuse and update existing TaskManagerAux object
+        TaskManagerAux existingTask = existingTaskMap.get(task.getId());
+        if (existingTask != null) {
+            // Update only the values, but keep the object (important for live updates!)
+            existingTask.setLastExecution(s.getLastExecution());
+            existingTask.setNextExecution(s.getNextSchedule());
+            existingTask.setNearestMinutesUntilExecution(diffInSeconds);
+            existingTask.setHasReadyTask(ready);
+            existingTask.setScheduled(scheduled);
+            // Only update isExecuting if it has changed (listener has priority!)
+            if (existingTask.isExecuting() != isExecuting) {
+                existingTask.setExecuting(isExecuting);
+            }
+            return existingTask;
+        }
+
+        // Create new only if no existing object available
+        return new TaskManagerAux(taskName, s.getLastExecution(), s.getNextSchedule(), task, profileId, diffInSeconds, ready, scheduled, isExecuting, customTaskName);
     }
 
     private void createAccountRow(DTOProfiles profile, List<TaskManagerAux> tasks, double uniformWidth) {

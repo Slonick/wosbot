@@ -72,7 +72,8 @@ public enum TpDailyTaskEnum {
     TEST_HOOK_LOOP(208, "Test Hook Loop", EnumConfigurationKey.TEST_HOOK_LOOP_ENABLED_BOOL),
     DUMMY_TASK(99, "Dummy Task", EnumConfigurationKey.DUMMY_TASK_ENABLED_BOOL),
     SKIP_TUTORIAL(98, "Skip Tutorial", EnumConfigurationKey.SKIP_TUTORIAL_ENABLED_BOOL),
-    CREATE_CHARACTER(110, "Create Character", EnumConfigurationKey.CREATE_CHARACTER_ENABLED_BOOL);
+    CREATE_CHARACTER(110, "Create Character", EnumConfigurationKey.CREATE_CHARACTER_ENABLED_BOOL),
+    CUSTOM_TASK(500, "Custom Task", null);
 
 
     private final int id;

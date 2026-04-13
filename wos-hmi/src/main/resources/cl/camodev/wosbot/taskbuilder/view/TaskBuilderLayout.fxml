@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.geometry.Insets?>
+
+<!-- Task Builder: Enhanced n8n-style WOS Bot Theme -->
+<BorderPane fx:id="rootPane" styleClass="task-builder-root" stylesheets="@taskbuilder.css"
+            xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1">
+
+    <!-- ═══ TOP: Clean Professional Toolbar ═══ -->
+    <top>
+        <HBox styleClass="tb-toolbar" spacing="0" alignment="CENTER_LEFT">
+            <padding><Insets top="0" bottom="0" left="16" right="16"/></padding>
+
+            <!-- Brand -->
+            <Label text="Task Builder" styleClass="tb-toolbar-title"/>
+
+            <Separator orientation="VERTICAL" styleClass="tb-toolbar-sep"/>
+
+            <!-- Profile Section -->
+            <HBox alignment="CENTER_LEFT" spacing="8" styleClass="tb-toolbar-section">
+                <Label text="Profile" styleClass="tb-toolbar-label"/>
+                <ComboBox fx:id="profileComboBox" promptText="Select Profile..." styleClass="tb-combo-compact" prefWidth="170" minWidth="-Infinity"/>
+                <Button fx:id="btnCapture" text="Capture" onAction="#handleCapture" styleClass="tb-btn-toolbar" minWidth="-Infinity"/>
+            </HBox>
+
+            <Separator orientation="VERTICAL" styleClass="tb-toolbar-sep"/>
+
+            <!-- Task Flow Section -->
+            <HBox alignment="CENTER_LEFT" spacing="8" styleClass="tb-toolbar-section">
+                <Label text="Flow" styleClass="tb-toolbar-label"/>
+                <TextField fx:id="taskNameField" promptText="Untitled Task" prefWidth="150" styleClass="tb-field-compact" minWidth="-Infinity"/>
+                <Button text="New" onAction="#handleNewSession" styleClass="tb-btn-toolbar-accent" minWidth="-Infinity"/>
+                <Button text="Export" onAction="#handleExportJson" styleClass="tb-btn-toolbar" minWidth="-Infinity"/>
+            </HBox>
+
+            <!-- Spacer pushes right section to the end -->
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <!-- View Controls (right-aligned) -->
+            <HBox alignment="CENTER_RIGHT" spacing="6" styleClass="tb-toolbar-section">
+                <ToggleButton fx:id="btnTogglePreview" text="Preview" selected="true" onAction="#handleTogglePreview" styleClass="tb-btn-toolbar-toggle" minWidth="-Infinity"/>
+                <Button fx:id="btnFullscreen" text="Fullscreen" onAction="#handleToggleFullscreen" styleClass="tb-btn-toolbar" minWidth="-Infinity"/>
+            </HBox>
+        </HBox>
+    </top>
+
+    <!-- ═══ CENTER: 3-column layout ═══ -->
+    <center>
+        <HBox>
+            <!-- ─ LEFT: Node Palette ─ -->
+            <VBox styleClass="tb-sidebar" spacing="6" prefWidth="48" minWidth="48" maxWidth="48" alignment="TOP_CENTER">
+                <padding><Insets top="12" bottom="12" left="6" right="6"/></padding>
+                
+                <!-- Node buttons -->
+                <Button text="👆" onAction="#handleAddTapNode" styleClass="tb-icon-btn" maxWidth="Infinity">
+                    <tooltip><Tooltip text="Tap Point"/></tooltip></Button>
+                <Button text="⏳" onAction="#handleAddWaitNode" styleClass="tb-icon-btn" maxWidth="Infinity">
+                    <tooltip><Tooltip text="Wait"/></tooltip></Button>
+                <Button text="↔" onAction="#handleAddSwipeNode" styleClass="tb-icon-btn" maxWidth="Infinity">
+                    <tooltip><Tooltip text="Swipe"/></tooltip></Button>
+                <Button text="🔙" onAction="#handleAddBackNode" styleClass="tb-icon-btn" maxWidth="Infinity">
+                    <tooltip><Tooltip text="Back"/></tooltip></Button>
+                <Button text="📝" onAction="#handleAddOcrNode" styleClass="tb-icon-btn" maxWidth="Infinity">
+                    <tooltip><Tooltip text="OCR Read"/></tooltip></Button>
+                <Button text="🔍" onAction="#handleAddTemplateNode" styleClass="tb-icon-btn" maxWidth="Infinity">
+                    <tooltip><Tooltip text="Find Image"/></tooltip></Button>
+
+                <Region VBox.vgrow="ALWAYS"/>
+
+                <!-- Action buttons at bottom -->
+                <Button onAction="#handleExecuteAll" styleClass="tb-icon-btn-green" maxWidth="Infinity">
+                    <graphic>
+                        <javafx.scene.shape.SVGPath content="M 8 5 L 19 12 L 8 19 Z" scaleX="0.8" scaleY="0.8" />
+                    </graphic>
+                    <tooltip><Tooltip text="Execute All"/></tooltip>
+                </Button>
+                <Button onAction="#handleClearAll" styleClass="tb-icon-btn-red" maxWidth="Infinity">
+                    <graphic>
+                        <javafx.scene.shape.SVGPath content="M 6 19 C 6 20.1 6.9 21 8 21 L 16 21 C 17.1 21 18 20.1 18 19 L 18 7 L 6 7 L 6 19 Z M 19 4 L 15.5 4 L 14.5 3 L 9.5 3 L 8.5 4 L 5 4 L 5 6 L 19 6 L 19 4 Z" scaleX="0.55" scaleY="0.55"/>
+                    </graphic>
+                    <tooltip><Tooltip text="Clear All"/></tooltip>
+                </Button>
+            </VBox>
+
+            <!-- ─ CENTER: Canvas + Properties Drawer ─ -->
+            <VBox HBox.hgrow="ALWAYS">
+                <StackPane fx:id="canvasContainer" styleClass="tb-canvas-container" VBox.vgrow="ALWAYS">
+                    <Pane fx:id="flowCanvas" styleClass="tb-flow-canvas"/>
+                </StackPane>
+
+                <!-- Enhanced Properties Drawer (visible when node selected) -->
+                <VBox fx:id="propsDrawer" styleClass="tb-props-drawer" visible="false" managed="false">
+                    <padding><Insets top="14" bottom="14" left="18" right="18"/></padding>
+                    <HBox alignment="CENTER_LEFT" spacing="14">
+                        <Label fx:id="propNodeIcon" styleClass="tb-props-icon"/>
+                        <Label fx:id="propNodeTitle" styleClass="tb-props-title"/>
+                        <Label fx:id="propStatusLabel" text="⏳ Pending" styleClass="tb-props-status">
+                            <HBox.margin><Insets left="12"/></HBox.margin>
+                        </Label>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Button text="▶ Execute" onAction="#handleExecuteSelected" styleClass="tb-btn-execute" prefWidth="95" minWidth="-Infinity"/>
+                        <Button text="🗑 Delete" onAction="#handleDeleteSelected" styleClass="tb-btn-danger"  prefWidth="90" minWidth="-Infinity"/>
+                        <Region minWidth="12"/>
+                        <Button text="✕" onAction="#handleDeselectNode" styleClass="tb-btn-close" minWidth="-Infinity"/>
+                    </HBox>
+                    <Separator styleClass="tb-hsep" BorderPane.alignment="CENTER">
+                        <padding><Insets top="8" bottom="8"/></padding>
+                    </Separator>
+                    <!-- TAP Properties -->
+                    <VBox fx:id="tapPropsBox" spacing="10" visible="false" managed="false">
+                        <FlowPane hgap="14" vgap="10" alignment="CENTER_LEFT">
+                            <Label text="Top-Left (X,Y):" styleClass="tb-props-label"/>
+                            <TextField fx:id="tapTlXField" promptText="0" prefWidth="70" styleClass="tb-text-field"/>
+                            <TextField fx:id="tapTlYField" promptText="0" prefWidth="70" styleClass="tb-text-field"/>
+                            <Label text="Bottom-Right (X,Y):" styleClass="tb-props-label"/>
+                            <TextField fx:id="tapBrXField" promptText="0" prefWidth="70" styleClass="tb-text-field"/>
+                            <TextField fx:id="tapBrYField" promptText="0" prefWidth="70" styleClass="tb-text-field"/>
+                            <Button text="Apply" onAction="#handleApplyTapProps" styleClass="tb-btn-primary"/>
+                        </FlowPane>
+                    </VBox>
+                    <!-- SWIPE Properties -->
+                    <VBox fx:id="swipePropsBox" spacing="10" visible="false" managed="false">
+                        <FlowPane hgap="14" vgap="10" alignment="CENTER_LEFT">
+                            <Label text="Start (X,Y):" styleClass="tb-props-label"/>
+                            <TextField fx:id="swipeStartXField" promptText="0" prefWidth="70" styleClass="tb-text-field"/>
+                            <TextField fx:id="swipeStartYField" promptText="0" prefWidth="70" styleClass="tb-text-field"/>
+                            <Label text="End (X,Y):" styleClass="tb-props-label"/>
+                            <TextField fx:id="swipeEndXField" promptText="0" prefWidth="70" styleClass="tb-text-field"/>
+                            <TextField fx:id="swipeEndYField" promptText="0" prefWidth="70" styleClass="tb-text-field"/>
+                            <Button text="Apply" onAction="#handleApplySwipeProps" styleClass="tb-btn-primary"/>
+                        </FlowPane>
+                    </VBox>
+                    <!-- WAIT Properties -->
+                    <VBox fx:id="waitPropsBox" spacing="10" visible="false" managed="false">
+                        <FlowPane hgap="14" vgap="10" alignment="CENTER_LEFT">
+                            <Label text="Wait Duration:" styleClass="tb-props-label"/>
+                            <TextField fx:id="waitMsField" promptText="1000" prefWidth="120" styleClass="tb-text-field"/>
+                            <Label text="ms" styleClass="tb-props-label"/>
+                            <Button text="Apply" onAction="#handleApplyWaitProps" styleClass="tb-btn-primary"/>
+                        </FlowPane>
+                    </VBox>
+                    <!-- BACK Properties -->
+                    <VBox fx:id="backPropsBox" spacing="10" visible="false" managed="false">
+                        <FlowPane hgap="14" vgap="10" alignment="CENTER_LEFT">
+                        </FlowPane>
+                    </VBox>
+                    <!-- OCR Properties -->
+                    <VBox fx:id="ocrPropsBox" spacing="10" visible="false" managed="false">
+                        <FlowPane hgap="14" vgap="10" alignment="CENTER_LEFT">
+                            <Label text="Top-Left (X,Y):" styleClass="tb-props-label"/>
+                            <TextField fx:id="ocrTlXField" promptText="0" prefWidth="70" styleClass="tb-text-field"/>
+                            <TextField fx:id="ocrTlYField" promptText="0" prefWidth="70" styleClass="tb-text-field"/>
+                            <Label text="Bottom-Right:" styleClass="tb-props-label"/>
+                            <TextField fx:id="ocrBrXField" promptText="100" prefWidth="70" styleClass="tb-text-field"/>
+                            <TextField fx:id="ocrBrYField" promptText="100" prefWidth="70" styleClass="tb-text-field"/>
+                        </FlowPane>
+                        <FlowPane hgap="14" vgap="10" alignment="CENTER_LEFT">
+                            <Label text="If result:" styleClass="tb-props-label"/>
+                            <ComboBox fx:id="ocrConditionCombo" prefWidth="130" styleClass="tb-combo"/>
+                            <TextField fx:id="ocrExpectedField" promptText="expected text…" prefWidth="200" styleClass="tb-text-field"/>
+                            <Button text="Apply" onAction="#handleApplyOcrProps" styleClass="tb-btn-primary"/>
+                        </FlowPane>
+                    </VBox>
+                    <!-- TEMPLATE SEARCH Properties -->
+                    <VBox fx:id="templatePropsBox" spacing="10" visible="false" managed="false">
+                        <FlowPane hgap="14" vgap="10" alignment="CENTER_LEFT">
+                            <Label text="Template:" styleClass="tb-props-label"/>
+                            <HBox spacing="6" alignment="CENTER_LEFT">
+                                <ComboBox fx:id="templateComboBox" prefWidth="220" styleClass="tb-combo"/>
+                                <Button fx:id="templateBrowseBtn" text="📂 Browse…"
+                                        onAction="#handleBrowseCustomTemplate" styleClass="tb-btn-secondary"/>
+                            </HBox>
+                            <Label text="Threshold (0-100):" styleClass="tb-props-label"/>
+                            <TextField fx:id="templateThresholdField" promptText="90" prefWidth="60" styleClass="tb-text-field"/>
+                            <CheckBox fx:id="templateGrayscaleCheck" text="Grayscale" styleClass="tb-props-label"/>
+                        </FlowPane>
+                        <FlowPane alignment="CENTER_LEFT">
+                            <Label fx:id="templateCustomPathLabel" text="" styleClass="tb-props-hint"
+                                   visible="false" managed="false"/>
+                        </FlowPane>
+                        <FlowPane hgap="14" vgap="10" alignment="CENTER_LEFT">
+                            <Label text="Search Area TL (X,Y):" styleClass="tb-props-label"/>
+                            <TextField fx:id="tplTlXField" promptText="opt" prefWidth="60" styleClass="tb-text-field"/>
+                            <TextField fx:id="tplTlYField" promptText="opt" prefWidth="60" styleClass="tb-text-field"/>
+                            <Label text="BR (X,Y):" styleClass="tb-props-label"/>
+                            <TextField fx:id="tplBrXField" promptText="opt" prefWidth="60" styleClass="tb-text-field"/>
+                            <TextField fx:id="tplBrYField" promptText="opt" prefWidth="60" styleClass="tb-text-field"/>
+                            <Label text="Attempts:" styleClass="tb-props-label"/>
+                            <TextField fx:id="templateAttemptsField" promptText="1" prefWidth="50" styleClass="tb-text-field"/>
+                            <Label text="Delay:" styleClass="tb-props-label"/>
+                            <TextField fx:id="templateDelayField" promptText="300" prefWidth="60" styleClass="tb-text-field"/>
+                            <Label text="ms" styleClass="tb-props-label"/>
+                        </FlowPane>
+                        <FlowPane hgap="14" vgap="10" alignment="CENTER_LEFT">
+                            <CheckBox fx:id="templateTapIfFoundCheck" text="👆 Tap if Found" styleClass="tb-props-label"/>
+                            <Label text="Offset X:" styleClass="tb-props-label"/>
+                            <TextField fx:id="templateOffsetXField" promptText="0" prefWidth="50" styleClass="tb-text-field"/>
+                            <Label text="Y:" styleClass="tb-props-label"/>
+                            <TextField fx:id="templateOffsetYField" promptText="0" prefWidth="50" styleClass="tb-text-field"/>
+                            <Button text="Apply" onAction="#handleApplyTemplateProps" styleClass="tb-btn-primary"/>
+                        </FlowPane>
+                    </VBox>
+                </VBox>
+            </VBox>
+
+            <!-- ─ RIGHT: Emulator Preview ─ -->
+            <VBox fx:id="rightPanel" styleClass="tb-preview-column" alignment="TOP_CENTER" spacing="0" minWidth="0">
+                <!-- Simple preview rectangle - no padding, no borders -->
+                <StackPane fx:id="previewContainer" styleClass="tb-preview-screen" VBox.vgrow="ALWAYS"
+                           minHeight="0"
+                           onMouseClicked="#handlePreviewClicked"
+                           onMousePressed="#handlePreviewMousePressed"
+                           onMouseDragged="#handlePreviewMouseDragged"
+                           onMouseReleased="#handlePreviewMouseReleased"
+                           onMouseMoved="#handlePreviewMouseMoved"
+                           onMouseEntered="#handlePreviewMouseEntered"
+                           onMouseExited="#handlePreviewMouseExited">
+                    <ImageView fx:id="previewImageView" preserveRatio="true" pickOnBounds="true" styleClass="image-view-preview"
+                               fitWidth="${previewContainer.width}" fitHeight="${previewContainer.height}" />
+                    <Label fx:id="previewHint" text="Click Capture to load"
+                           styleClass="tb-props-empty-hint"/>
+                    <Pane fx:id="previewCrosshairPane" mouseTransparent="true" visible="false"
+                          prefWidth="${previewContainer.width}" prefHeight="${previewContainer.height}">
+                        <javafx.scene.shape.Rectangle fx:id="selectionBox" styleClass="selection-box" visible="false"
+                                                      fill="rgba(252,209,118,0.15)" stroke="#fcd176" strokeWidth="1.5" />
+                        <javafx.scene.shape.Line fx:id="previewCrossX" styleClass="tb-crosshair"/>
+                        <javafx.scene.shape.Line fx:id="previewCrossY" styleClass="tb-crosshair"/>
+                        <Label fx:id="previewCoordsLabel" styleClass="tb-coords-label"/>
+                    </Pane>
+                </StackPane>
+            </VBox>
+        </HBox>
+    </center>
+
+    <!-- ═══ BOTTOM: Status Bar ═══ -->
+    <bottom>
+        <HBox styleClass="tb-statusbar" spacing="14" alignment="CENTER_LEFT" minHeight="28">
+            <padding><Insets top="4" bottom="4" left="16" right="16"/></padding>
+            <Label fx:id="statusLabel" text="Ready — add nodes from the toolbox" styleClass="tb-status-text"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="nodeCountLabel" text="0 nodes" styleClass="tb-status-count"/>
+        </HBox>
+    </bottom>
+</BorderPane>

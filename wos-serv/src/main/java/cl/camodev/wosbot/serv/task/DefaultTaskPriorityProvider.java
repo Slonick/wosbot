@@ -35,6 +35,11 @@ public class DefaultTaskPriorityProvider implements TaskPriorityProvider {
                     Integer.class);
             return priority != null ? priority : 100;
         }
+        // Custom tasks with user-specified priority
+        Integer customPriority = task.getCustomPriority();
+        if (customPriority != null) {
+            return customPriority;
+        }
         return 0;
     }
 }

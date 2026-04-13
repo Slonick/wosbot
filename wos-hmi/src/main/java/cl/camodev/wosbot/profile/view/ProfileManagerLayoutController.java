@@ -133,6 +133,9 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 
 	private void applySort(String sortBy) {
 		if (sortedProfiles == null || sortBy == null) return;
+		// MUST unbind before calling setComparator — a bound SortedList throws:
+		// "SortedList.comparator: A bound value cannot be set."
+		sortedProfiles.comparatorProperty().unbind();
 		switch (sortBy) {
 			case "Priority":
 				sortedProfiles.setComparator(Comparator.comparingLong(p -> p.getPriority() == null ? Long.MAX_VALUE : p.getPriority()));
@@ -143,8 +146,8 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 			case "Emulator":
 				sortedProfiles.setComparator(Comparator.comparing(p -> p.getEmulatorNumber() == null ? "" : String.valueOf(p.getEmulatorNumber())));
 				break;
-			default: // Name
-				sortedProfiles.setComparator(Comparator.comparing(p -> p.getName() == null ? "" : p.getName().toLowerCase()));
+			default: // Name — re-bind to table so column-header clicking still works
+				sortedProfiles.comparatorProperty().bind(tableviewLogMessages.comparatorProperty());
 				break;
 		}
 	}
@@ -231,21 +234,21 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 					{
 						FontIcon iconDelete = new FontIcon("mdi2c-close");
 						iconDelete.setIconSize(16);
-						iconDelete.setStyle("-fx-icon-color: #f85149;"); // red X
+						iconDelete.setIconColor(Color.web("#f85149")); // red X
 						btnDelete.setGraphic(iconDelete);
 						btnDelete.getStyleClass().add("action-icon-button");
 						btnDelete.setTooltip(new Tooltip("Delete Profile"));
 
 						FontIcon iconDuplicate = new FontIcon("mdi2c-content-copy");
 						iconDuplicate.setIconSize(16);
-						iconDuplicate.setStyle("-fx-icon-color: #388bfd;"); // blue copy
+						iconDuplicate.setIconColor(Color.web("#388bfd")); // blue copy
 						btnDuplicate.setGraphic(iconDuplicate);
 						btnDuplicate.getStyleClass().add("action-icon-button");
 						btnDuplicate.setTooltip(new Tooltip("Duplicate Profile"));
 
-						FontIcon iconLoad = new FontIcon("mdi2p-play-outline");
-						iconLoad.setIconSize(16);
-						iconLoad.setStyle("-fx-icon-color: #2ea043;"); // green play
+						FontIcon iconLoad = new FontIcon("mdi2p-play");
+						iconLoad.setIconSize(22);
+						iconLoad.setIconColor(Color.web("#2ea043")); // green play
 						btnLoad.setGraphic(iconLoad);
 						btnLoad.getStyleClass().add("action-icon-button");
 						btnLoad.setTooltip(new Tooltip("Load Profile"));
@@ -371,6 +374,7 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 		});
 
 		sortedProfiles = new SortedList<>(filteredProfiles);
+		// Bind to table comparator by default so column-click sorting works
 		sortedProfiles.comparatorProperty().bind(tableviewLogMessages.comparatorProperty());
 		tableviewLogMessages.setItems(sortedProfiles);
 	}
@@ -403,8 +407,13 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 					loadedProfileId = selectedProfile.getId();
 				}
 
-				// Re-apply current sort after loading
-				applySort(comboBoxSortBy != null ? comboBoxSortBy.getValue() : "Name");
+				// Re-apply sort only for non-default (non-Name) sorts.
+				// When sortBy is "Name", the table binding already handles ordering —
+				// calling applySort("Name") would re-bind an already-bound property and crash.
+				String currentSort = comboBoxSortBy != null ? comboBoxSortBy.getValue() : null;
+				if (currentSort != null && !currentSort.equals("Name")) {
+					applySort(currentSort);
+				}
 			});
 		});
 	}

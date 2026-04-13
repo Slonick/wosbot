@@ -99,6 +99,28 @@ public class TaskQueue {
         return removed;
     }
 
+    /**
+     * Removes a custom task from the queue by its distinct key (className).
+     * This avoids going through DelayedTaskRegistry which has no factory for CUSTOM_TASK.
+     *
+     * @param distinctKey The distinct key (className) of the custom task to remove
+     * @return true if a task was removed
+     */
+    public synchronized boolean removeTaskByDistinctKey(String distinctKey) {
+        boolean removed = taskQueue.removeIf(task -> {
+            Object key = task.getDistinctKey();
+            return key != null && key.toString().equals(distinctKey);
+        });
+
+        if (removed) {
+            logInfo("Removed custom task with key: " + distinctKey);
+        } else {
+            logInfo("Custom task with key '" + distinctKey + "' was not found in queue");
+        }
+
+        return removed;
+    }
+
     public LocalDateTime getDelay() {
         return taskQueueStatus.getDelayUntil();
     }
@@ -172,6 +194,13 @@ public class TaskQueue {
             return false;
         }
         return taskQueue.stream().anyMatch(task -> task.equals(prototype));
+    }
+
+    public synchronized boolean isTaskScheduled(String customTaskName) {
+        return taskQueue.stream().anyMatch(task -> {
+            Object key = task.getDistinctKey();
+            return key != null && key.toString().equals(customTaskName);
+        });
     }
 
     /**
@@ -410,6 +439,10 @@ public class TaskQueue {
         DTOTaskState taskState = new DTOTaskState();
         taskState.setProfileId(profile.getId());
         taskState.setTaskId(task.getTpDailyTaskId());
+        Object distinctKey = task.getDistinctKey();
+        if (distinctKey != null) {
+            taskState.setCustomTaskName(distinctKey.toString());
+        }
         taskState.setScheduled(true);
         taskState.setExecuting(true);
         taskState.setLastExecutionTime(LocalDateTime.now());
@@ -424,9 +457,13 @@ public class TaskQueue {
         taskState.setScheduled(task.isRecurring());
         taskState.setLastExecutionTime(LocalDateTime.now());
         taskState.setNextExecutionTime(task.getScheduled());
+        Object distinctKey = task.getDistinctKey();
+        if (distinctKey != null) {
+            taskState.setCustomTaskName(distinctKey.toString());
+        }
 
         ServTaskManager.getInstance().setTaskState(profile.getId(), taskState);
-        ServScheduler.getServices().updateDailyTaskStatus(profile, task.getTpTask(), task.getScheduled());
+        ServScheduler.getServices().updateDailyTaskStatus(profile, task.getTpTask(), task.getScheduled(), taskState.getCustomTaskName());
     }
 
     private void handleTaskRescheduling(DelayedTask task, LocalDateTime scheduledBefore) {

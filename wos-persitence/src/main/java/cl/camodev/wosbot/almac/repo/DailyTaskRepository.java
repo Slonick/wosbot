@@ -61,7 +61,7 @@ public class DailyTaskRepository implements IDailyTaskRepository {
 	public DailyTask findByProfileIdAndTaskName(Long profileId, TpDailyTaskEnum taskName) {
 		String query = """
 				SELECT d FROM DailyTask d
-				WHERE d.profile.id = :profileId AND d.task.id = :id""";
+				WHERE d.profile.id = :profileId AND d.task.id = :id AND (d.customTaskName IS NULL OR d.customTaskName = '')""";
 
 		// Crear el mapa de parámetros
 		Map<String, Object> parameters = new HashMap<>();
@@ -74,10 +74,26 @@ public class DailyTaskRepository implements IDailyTaskRepository {
 	}
 
 	@Override
-	public Map<Integer, DTODailyTaskStatus> findDailyTasksStatusByProfile(Long profileId) {
+	public DailyTask findByProfileIdTaskNameAndCustomName(Long profileId, TpDailyTaskEnum taskName, String customName) {
+		String query = """
+				SELECT d FROM DailyTask d
+				WHERE d.profile.id = :profileId AND d.task.id = :id AND d.customTaskName = :customName""";
+
+		Map<String, Object> parameters = new HashMap<>();
+		parameters.put("profileId", profileId);
+		parameters.put("id", taskName.getId());
+		parameters.put("customName", customName);
+
+		List<DailyTask> results = persistence.getQueryResults(query, DailyTask.class, parameters);
+
+		return results.isEmpty() ? null : results.get(0);
+	}
+
+	@Override
+	public List<DTODailyTaskStatus> findDailyTasksStatusByProfile(Long profileId) {
 		String query = """
 				SELECT new cl.camodev.wosbot.ot.DTODailyTaskStatus(
-				d.profile.id, d.task.id, d.lastExecution, d.nextSchedule)
+				d.profile.id, d.task.id, d.lastExecution, d.nextSchedule, d.customTaskName)
 				FROM DailyTask d
 				WHERE d.profile.id = :profileId""";
 
@@ -85,9 +101,7 @@ public class DailyTaskRepository implements IDailyTaskRepository {
 		Map<String, Object> parameters = new HashMap<>();
 		parameters.put("profileId", profileId);
 
-		List<DTODailyTaskStatus> results = persistence.getQueryResults(query, DTODailyTaskStatus.class, parameters);
-
-		return results.stream().collect(Collectors.toMap(DTODailyTaskStatus::getIdTpDailyTask, dto -> dto));
+		return persistence.getQueryResults(query, DTODailyTaskStatus.class, parameters);
 	}
 
 	@Override

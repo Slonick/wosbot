@@ -5,11 +5,13 @@
 <?import javafx.scene.layout.*?>
 
 <VBox xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/17.0.12" fx:controller="cl.camodev.wosbot.taskmanager.view.ScheduleTaskDialogController"
-      styleClass="task-page-root" prefHeight="350.0" prefWidth="440.0">
+      style="-fx-background-color: transparent; -fx-padding: 10;" prefHeight="350.0" prefWidth="440.0">
     <!-- Scheduled Task Card -->
-    <VBox styleClass="content-card">
-        <HBox alignment="CENTER_LEFT" maxWidth="1.7976931348623157E308" styleClass="header-blue">
-            <Label fx:id="lblTaskName" text="Schedule Task" />
+    <VBox styleClass="content-card" style="-fx-background-color: #1e1e24; -fx-background-radius: 8; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 15, 0, 0, 8);">
+        <HBox fx:id="headerBox" alignment="CENTER_LEFT" maxWidth="1.7976931348623157E308" styleClass="header-blue" spacing="10">
+            <Label fx:id="lblTaskName" text="Schedule Task" HBox.hgrow="ALWAYS" maxWidth="1.7976931348623157E308" />
+            <Region HBox.hgrow="ALWAYS" />
+            <Button mnemonicParsing="false" onAction="#handleClose" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="X" />
         </HBox>
         <VBox styleClass="task-section-inner">
             <Label styleClass="task-card-description" text="Schedule exactly when to execute this task." wrapText="true" />

@@ -132,8 +132,8 @@ public class ServScheduler {
 												.create(t, profile), Collectors.toList())));
 
 						// obtain current task schedules
-						Map<Integer, DTODailyTaskStatus> taskSchedules = iDailyTaskRepository
-								.findDailyTasksStatusByProfile(profile.getId());
+						List<DTODailyTaskStatus> rawSchedules = iDailyTaskRepository.findDailyTasksStatusByProfile(profile.getId());
+						Map<Integer, DTODailyTaskStatus> taskSchedules = rawSchedules.stream().collect(Collectors.toMap(DTODailyTaskStatus::getIdTpDailyTask, dto -> dto, (a, b) -> a));
 
 						// Enqueue tasks based on profile configuration
 						taskMappings.forEach((configKey, suppliers) -> {
@@ -178,6 +178,49 @@ public class ServScheduler {
 								}
 							}
 						});
+
+						// Inject enabled custom tasks from CustomTaskService
+						CustomTaskService customTaskService = CustomTaskService.getInstance();
+						java.util.Collection<CustomTaskService.CustomTaskSettings> enabledCustomTasks = customTaskService.getEnabledTasks();
+						ServLogs.getServices().appendLog(EnumTpMessageSeverity.INFO, "ServScheduler",
+								profile.getName(), "Custom tasks to inject: " + enabledCustomTasks.size());
+						for (CustomTaskService.CustomTaskSettings settings : enabledCustomTasks) {
+							ServLogs.getServices().appendLog(EnumTpMessageSeverity.INFO, "ServScheduler",
+									profile.getName(), "Creating custom task: " + settings.getCustomName() + " (class: " + settings.getClassName() + ")");
+							DelayedTask customTask = customTaskService.createTaskWithSettings(settings, profile);
+							if (customTask != null) {
+								DTODailyTaskStatus status = rawSchedules.stream()
+										.filter(st -> st.getIdTpDailyTask() == TpDailyTaskEnum.CUSTOM_TASK.getId() && settings.getClassName().equals(st.getCustomTaskName()))
+										.findFirst().orElse(null);
+
+								if (status != null && status.getNextSchedule() != null) {
+									customTask.reschedule(status.getNextSchedule());
+									customTask.setLastExecutionTime(status.getLastExecution());
+									ServLogs.getServices().appendLog(EnumTpMessageSeverity.INFO, settings.getCustomName(),
+											profile.getName(), "Resuming schedule. Next execution: " + status.getNextSchedule().format(fmt));
+								} else {
+									customTask.reschedule(LocalDateTime.now());
+								}
+								customTask.setRecurring(true);
+								
+								// Register initial task state for Task Manager UI
+								DTOTaskState taskState = new DTOTaskState();
+								taskState.setProfileId(profile.getId());
+								taskState.setTaskId(TpDailyTaskEnum.CUSTOM_TASK.getId());
+								taskState.setCustomTaskName(settings.getClassName());
+								taskState.setScheduled(true);
+								taskState.setExecuting(false);
+								taskState.setNextExecutionTime(customTask.getScheduled());
+								ServTaskManager.getInstance().setTaskState(profile.getId(), taskState);
+								
+								queue.addTask(customTask);
+								ServLogs.getServices().appendLog(EnumTpMessageSeverity.INFO, settings.getCustomName(),
+										profile.getName(), "Custom task scheduled (offset: " + settings.getOffsetMinutes() + "m, priority: " + settings.getPriority() + ")");
+							} else {
+								ServLogs.getServices().appendLog(EnumTpMessageSeverity.ERROR, "ServScheduler",
+										profile.getName(), "Failed to create custom task instance: " + settings.getCustomName());
+							}
+						}
 					});
 
 			queueManager.startQueues();
@@ -275,42 +318,60 @@ public class ServScheduler {
 	}
 
 	public void updateDailyTaskStatus(DTOProfiles profile, TpDailyTaskEnum task, LocalDateTime nextSchedule) {
+		updateDailyTaskStatus(profile, task, nextSchedule, null);
+	}
 
-		DailyTask dailyTask = iDailyTaskRepository.findByProfileIdAndTaskName(profile.getId(), task);
+	public void updateDailyTaskStatus(DTOProfiles profile, TpDailyTaskEnum task, LocalDateTime nextSchedule, String customTaskName) {
+
+		DailyTask dailyTask;
+		if (customTaskName != null && task == TpDailyTaskEnum.CUSTOM_TASK) {
+			dailyTask = iDailyTaskRepository.findByProfileIdTaskNameAndCustomName(profile.getId(), task, customTaskName);
+		} else {
+			dailyTask = iDailyTaskRepository.findByProfileIdAndTaskName(profile.getId(), task);
+		}
 
 		if (dailyTask == null) {
 			// Create new task if it doesn't exist
 			dailyTask = new DailyTask();
 
-			Profile profileEntity = iProfileRepository.getProfileById(profile.getId());
-			TpDailyTask tpDailyTaskEntity = iDailyTaskRepository.findTpDailyTaskById(task.getId());
+			cl.camodev.wosbot.almac.entity.Profile profileEntity = iProfileRepository.getProfileById(profile.getId());
+			cl.camodev.wosbot.almac.entity.TpDailyTask tpDailyTaskEntity = iDailyTaskRepository.findTpDailyTaskById(task.getId());
 			dailyTask.setProfile(profileEntity);
 			dailyTask.setTask(tpDailyTaskEntity);
+			dailyTask.setCustomTaskName(customTaskName);
 			dailyTask.setLastExecution(LocalDateTime.now());
 			dailyTask.setNextSchedule(nextSchedule);
 			iDailyTaskRepository.addDailyTask(dailyTask);
+		} else {
+			dailyTask.setLastExecution(LocalDateTime.now());
+			dailyTask.setNextSchedule(nextSchedule);
+			// Save the entity (whether new or existing)
+			iDailyTaskRepository.saveDailyTask(dailyTask);
 		}
+	}
 
-		dailyTask.setLastExecution(LocalDateTime.now());
-		dailyTask.setNextSchedule(nextSchedule);
-
-		// Save the entity (whether new or existing)
-		iDailyTaskRepository.saveDailyTask(dailyTask);
+	public void removeTaskFromScheduler(Long profileId, TpDailyTaskEnum taskEnum) {
+		removeTaskFromScheduler(profileId, taskEnum, null);
 	}
 
 	/**
 	 * Removes a task from the scheduler for a specific profile
 	 * 
-	 * @param profileId The profile ID
-	 * @param taskEnum  The task to remove
+	 * @param profileId      The profile ID
+	 * @param taskEnum       The task to remove
+	 * @param customTaskName The custom task name if applicable
 	 */
-	public void removeTaskFromScheduler(Long profileId, TpDailyTaskEnum taskEnum) {
+	public void removeTaskFromScheduler(Long profileId, TpDailyTaskEnum taskEnum, String customTaskName) {
 		try {
 			// Get the task queue for the profile
 			TaskQueue queue = queueManager.getQueue(profileId);
 			if (queue != null) {
-				// Remove the task from the queue
-				boolean removedFromQueue = queue.removeTask(taskEnum);
+				boolean removedFromQueue;
+				if (taskEnum == TpDailyTaskEnum.CUSTOM_TASK && customTaskName != null) {
+					removedFromQueue = queue.removeTaskByDistinctKey(customTaskName);
+				} else {
+					removedFromQueue = queue.removeTask(taskEnum);
+				}
 				ServLogs.getServices().appendLog(EnumTpMessageSeverity.INFO, "Scheduler",
 						"Profile " + profileId, "Removing task " + taskEnum.getName()
 								+ " from scheduler. Removed from queue: " + removedFromQueue);
@@ -323,6 +384,9 @@ public class ServScheduler {
 			DTOTaskState taskState = new DTOTaskState();
 			taskState.setProfileId(profileId);
 			taskState.setTaskId(taskEnum.getId());
+			if (taskEnum == TpDailyTaskEnum.CUSTOM_TASK && customTaskName != null) {
+				taskState.setCustomTaskName(customTaskName);
+			}
 			taskState.setScheduled(false);
 			taskState.setExecuting(false);
 			taskState.setLastExecutionTime(LocalDateTime.now());

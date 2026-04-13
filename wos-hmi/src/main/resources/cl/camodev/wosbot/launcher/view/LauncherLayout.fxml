@@ -100,6 +100,13 @@
                     <org.kordamp.ikonli.javafx.FontIcon fx:id="iconDiscordBubble" iconSize="18" styleClass="discord-bubble-icon" onMouseClicked="#openDiscord" />
                     <Button fx:id="btnCloseDiscordBubble" text="✕" styleClass="discord-bubble-close" onAction="#handleCloseDiscordBubble" focusTraversable="false" />
                 </HBox>
+
+                <!-- Coffee Bubble -->
+                <HBox fx:id="coffeeBubbleContainer" alignment="CENTER" styleClass="coffee-bubble">
+                    <Label text="Like the bot? Buy me a Coffee" styleClass="coffee-bubble-text" onMouseClicked="#openCoffee" />
+                    <org.kordamp.ikonli.javafx.FontIcon fx:id="iconCoffeeBubble" iconSize="18" styleClass="coffee-bubble-icon" onMouseClicked="#openCoffee" />
+                    <Button fx:id="btnCloseCoffeeBubble" text="✕" styleClass="coffee-bubble-close" onAction="#handleCloseCoffeeBubble" focusTraversable="false" />
+                </HBox>
             </HBox>
 
             <!-- Spacer -->
@@ -111,7 +118,7 @@
                 
                 <SplitMenuButton fx:id="buttonPauseResume" disable="true" mnemonicParsing="false"
                                  onAction="#handleButtonPauseResume" text="Pause"
-                                 styleClass="action-button-pause" prefHeight="38" prefWidth="140">
+                                 styleClass="action-button-pause" prefHeight="38" prefWidth="140" minWidth="-Infinity">
                     <items>
                         <MenuItem fx:id="menuToggleCurrentQueue" onAction="#handleToggleCurrentQueue" text="Pause current queue" />
                         <MenuItem fx:id="menuToggleAllQueues" onAction="#handleToggleAllQueues" text="Pause all queues" />
@@ -120,7 +127,7 @@
 
                 <Button fx:id="buttonStartStop" disable="true" mnemonicParsing="false"
                         onAction="#handleButtonStartStop" text="Start Bot"
-                        styleClass="action-button-start" prefHeight="38" prefWidth="140" />
+                        styleClass="action-button-start" prefHeight="38" prefWidth="140" minWidth="-Infinity" />
             </HBox>
 
         </HBox>

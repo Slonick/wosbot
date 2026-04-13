@@ -17,7 +17,7 @@ public class ServTaskManager {
 
 	private static final ServTaskManager INSTANCE = new ServTaskManager();
 
-	private ConcurrentHashMap<Long, HashMap<Integer, DTOTaskState>> map = new ConcurrentHashMap<>();
+	private ConcurrentHashMap<Long, HashMap<String, DTOTaskState>> map = new ConcurrentHashMap<>();
 
 	private ServTaskManager() {
 		// Private constructor to prevent instantiation
@@ -27,15 +27,27 @@ public class ServTaskManager {
 		return INSTANCE;
 	}
 
+	private String generateKey(Integer taskId, String customTaskName) {
+		if (customTaskName != null && !customTaskName.isEmpty()) {
+			return taskId + "_" + customTaskName;
+		}
+		return String.valueOf(taskId);
+	}
+
 	public void setTaskState(Long profileId, DTOTaskState taskState) {
-		map.computeIfAbsent(profileId, k -> new HashMap<>()).put(taskState.getTaskId(), taskState);
+		String key = generateKey(taskState.getTaskId(), taskState.getCustomTaskName());
+		map.computeIfAbsent(profileId, k -> new HashMap<>()).put(key, taskState);
 		notifyListeners(profileId, taskState.getTaskId(), taskState);
 	}
 
 	public DTOTaskState getTaskState(Long profileId, int taskNameId) {
-		HashMap<Integer, DTOTaskState> tasks = map.get(profileId);
+		return getTaskState(profileId, taskNameId, null);
+	}
+
+	public DTOTaskState getTaskState(Long profileId, int taskNameId, String customTaskName) {
+		HashMap<String, DTOTaskState> tasks = map.get(profileId);
 		if (tasks != null) {
-			return tasks.get(taskNameId);
+			return tasks.get(generateKey(taskNameId, customTaskName));
 		}
 		return null;
 	}
@@ -54,9 +66,9 @@ public class ServTaskManager {
 	}
 
 	public List<DTODailyTaskStatus> getDailyTaskStatusPersistence(Long profileId) {
-		Map<Integer, DTODailyTaskStatus> taskSchedules = DailyTaskRepository.getRepository().findDailyTasksStatusByProfile(profileId);
+		List<DTODailyTaskStatus> taskSchedules = DailyTaskRepository.getRepository().findDailyTasksStatusByProfile(profileId);
 		if (taskSchedules != null && !taskSchedules.isEmpty()) {
-			return new ArrayList<>(taskSchedules.values());
+			return taskSchedules;
 		}
 		return new ArrayList<>();
 	}

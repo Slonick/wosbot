@@ -23,11 +23,12 @@ public class TaskManagerAux {
 	private final BooleanProperty hasReadyTask;
 	private final BooleanProperty scheduled;
 	private final BooleanProperty executing;
+	private final StringProperty customTaskName;
 
 	// —————————————————————
 	// CONSTRUCTOR
 	// —————————————————————
-	public TaskManagerAux(String taskName, LocalDateTime lastExecution, LocalDateTime nextExecution, TpDailyTaskEnum taskEnum, Long profileId, long nearestMinutesUntilExecution, boolean hasReadyTask, boolean isScheduled, boolean executing) {
+	public TaskManagerAux(String taskName, LocalDateTime lastExecution, LocalDateTime nextExecution, TpDailyTaskEnum taskEnum, Long profileId, long nearestMinutesUntilExecution, boolean hasReadyTask, boolean isScheduled, boolean executing, String customTaskName) {
 
 		this.taskName = new SimpleStringProperty(taskName);
 		this.lastExecution = new SimpleObjectProperty<>(lastExecution);
@@ -38,6 +39,19 @@ public class TaskManagerAux {
 		this.hasReadyTask = new SimpleBooleanProperty(hasReadyTask);
 		this.scheduled = new SimpleBooleanProperty(isScheduled);
 		this.executing = new SimpleBooleanProperty(executing);
+		this.customTaskName = new SimpleStringProperty(customTaskName);
+	}
+
+	public String getCustomTaskName() {
+		return customTaskName.get();
+	}
+
+	public StringProperty customTaskNameProperty() {
+		return customTaskName;
+	}
+
+	public void setCustomTaskName(String v) {
+		customTaskName.set(v);
 	}
 
 	public String getTaskName() {
