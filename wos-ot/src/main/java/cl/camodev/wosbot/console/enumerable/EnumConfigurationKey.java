@@ -300,6 +300,8 @@ public enum EnumConfigurationKey {
     CREATE_CHARACTER_SKIP_TUTORIAL_BOOL("false", Boolean.class),
     TEST_HOOK_LOOP_ENABLED_BOOL("false", Boolean.class),
     KEEP_EMULATOR_OPEN_BOOL("false", Boolean.class),
+	PROFILE_MAX_ACTIVE_TIME_ENABLED_BOOL("false", Boolean.class),
+	PROFILE_MAX_ACTIVE_TIME_MINUTES_INT("60", Integer.class),
 
     // ========================================================================
     // STATISTICS FOR UI

@@ -106,7 +106,7 @@ public class EditProfileController implements Initializable {
             if (!newValue.matches("\\d*")) {
                 txtCharacterServer.setText(newValue.replaceAll("[^\\d]", ""));
             }
-        });                      
+        });
 
         // Configure the priority slider
         sliderPriority.valueProperty().addListener((observable, oldValue, newValue) -> {
