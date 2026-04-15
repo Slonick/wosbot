@@ -26,11 +26,13 @@ import javafx.collections.transformation.SortedList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -39,11 +41,14 @@ import javafx.scene.control.ToggleButton;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
+import javafx.stage.Popup;
 import javafx.util.Callback;
 import javafx.util.Duration;
 import org.kordamp.ikonli.javafx.FontIcon;
@@ -229,7 +234,7 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 				return new TableCell<ProfileAux, Void>() {
 					private final Button btnDelete = new Button();
 					private final Button btnLoad = new Button();
-					private final Button btnDuplicate = new Button();
+					private final Button btnViewTasks = new Button();
 
 					{
 						FontIcon iconDelete = new FontIcon("mdi2c-close");
@@ -239,12 +244,12 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 						btnDelete.getStyleClass().add("action-icon-button");
 						btnDelete.setTooltip(new Tooltip("Delete Profile"));
 
-						FontIcon iconDuplicate = new FontIcon("mdi2c-content-copy");
-						iconDuplicate.setIconSize(16);
-						iconDuplicate.setIconColor(Color.web("#388bfd")); // blue copy
-						btnDuplicate.setGraphic(iconDuplicate);
-						btnDuplicate.getStyleClass().add("action-icon-button");
-						btnDuplicate.setTooltip(new Tooltip("Duplicate Profile"));
+						FontIcon iconTasks = new FontIcon("mdi2f-format-list-checks");
+						iconTasks.setIconSize(18);
+						iconTasks.setIconColor(Color.web("#388bfd")); // blue
+						btnViewTasks.setGraphic(iconTasks);
+						btnViewTasks.getStyleClass().add("action-icon-button");
+						btnViewTasks.setTooltip(new Tooltip("View Enabled Tasks"));
 
 						FontIcon iconLoad = new FontIcon("mdi2p-play");
 						iconLoad.setIconSize(22);
@@ -253,8 +258,9 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 						btnLoad.getStyleClass().add("action-icon-button");
 						btnLoad.setTooltip(new Tooltip("Load Profile"));
 
-						btnDuplicate.setOnAction(e -> {
-							System.out.println("User clicked duplicate. Add actual duplication logic if needed.");
+						btnViewTasks.setOnAction(e -> {
+							ProfileAux currentProfile = getTableView().getItems().get(getIndex());
+							showTasksPopup(currentProfile, btnViewTasks);
 						});
 
 						btnDelete.setOnAction((ActionEvent event) -> {
@@ -299,7 +305,7 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 						if (empty) {
 							setGraphic(null);
 						} else {
-							HBox buttonContainer = new HBox(5, btnLoad, btnDuplicate, btnDelete);
+							HBox buttonContainer = new HBox(5, btnLoad, btnViewTasks, btnDelete);
 							buttonContainer.setAlignment(Pos.CENTER);
 							setGraphic(buttonContainer);
 						}
@@ -387,6 +393,77 @@ public class ProfileManagerLayoutController implements IProfileChangeObserver {
 	@FXML
 	void handleButtonBulkUpdateProfiles(ActionEvent event) {
 		profileManagerActionController.showBulkUpdateDialog(loadedProfileId, profiles, btnBulkUpdate);
+	}
+
+	private void showTasksPopup(ProfileAux profile, Node ownerNode) {
+		Popup popup = new Popup();
+		popup.setAutoHide(true);
+		
+		VBox root = new VBox(10);
+		root.setStyle("-fx-background-color: #1e1e2e; -fx-padding: 15; -fx-border-color: #388bfd; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-radius: 5;");
+		
+		Label title = new Label("Enabled Tasks: " + profile.getName());
+		title.setStyle("-fx-text-fill: #a8dadc; -fx-font-size: 14px; -fx-font-weight: bold;");
+		root.getChildren().add(title);
+		
+		FlowPane flowPane = new FlowPane(8, 8);
+		flowPane.setPrefWidth(280);
+		
+		boolean hasTasks = false;
+		for (ConfigAux cfg : profile.getConfigs()) {
+			if ("true".equalsIgnoreCase(cfg.getValue())) {
+				String key = cfg.getName();
+				// Exclude some common non-task boolean configs
+				if (key != null && key.endsWith("_BOOL") 
+				    && !key.equals("BOOL_DEBUG") 
+				    && !key.equals("TELEGRAM_BOT_ENABLED_BOOL")
+				    && !key.equals("AUTO_START_ENABLED_BOOL")) {
+					
+					hasTasks = true;
+					String prettyName = formatTaskName(key);
+					
+					Label lbl = new Label(prettyName);
+					lbl.setStyle("-fx-background-color: #2ea043; -fx-text-fill: white; -fx-padding: 4 8; -fx-background-radius: 4; -fx-font-size: 11px;");
+					
+					FontIcon checkObj = new FontIcon("mdi2c-check-circle");
+					checkObj.setIconSize(12);
+					checkObj.setIconColor(Color.WHITE);
+					lbl.setGraphic(checkObj);
+					
+					flowPane.getChildren().add(lbl);
+				}
+			}
+		}
+		
+		if (!hasTasks) {
+			Label empty = new Label("No tasks enabled.");
+			empty.setStyle("-fx-text-fill: #8b949e; -fx-font-style: italic;");
+			root.getChildren().add(empty);
+		} else {
+			root.getChildren().add(flowPane);
+		}
+		
+		popup.getContent().add(root);
+		
+		javafx.geometry.Bounds bounds = ownerNode.localToScreen(ownerNode.getBoundsInLocal());
+		if (bounds != null) {
+			popup.show(ownerNode, bounds.getMinX(), bounds.getMaxY() + 5);
+		}
+	}
+
+	private String formatTaskName(String key) {
+		String s = key;
+		if (s.endsWith("_BOOL")) s = s.substring(0, s.length() - 5);
+		if (s.startsWith("BOOL_")) s = s.substring(5);
+		s = s.replace("_", " ").toLowerCase();
+		String[] words = s.split(" ");
+		StringBuilder sb = new StringBuilder();
+		for (String w : words) {
+			if (w.length() > 0) {
+				sb.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1)).append(" ");
+			}
+		}
+		return sb.toString().trim();
 	}
 
 	public void loadProfiles() {
