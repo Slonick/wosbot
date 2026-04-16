@@ -51,6 +51,13 @@
                           <Region HBox.hgrow="ALWAYS" />
                           <TextField fx:id="textfieldMaxConcurrentInstances" maxWidth="60.0" minWidth="60.0" prefWidth="60.0" />
                       </HBox>
+                      <!-- Profile Max Active Time -->
+                      <HBox alignment="CENTER_LEFT" spacing="10">
+                          <CheckBox fx:id="checkboxProfileMaxActiveTimeEnabled" text="Limit Profile Active Time" />
+                          <Region HBox.hgrow="ALWAYS" />
+                          <Label text="min" />
+                          <TextField fx:id="textfieldProfileMaxActiveTimeMinutes" maxWidth="60.0" minWidth="60.0" prefWidth="60.0" />
+                      </HBox>
                       <!-- Auto Start -->
                       <VBox spacing="5" styleClass="auto-start-container">
                           <CheckBox fx:id="checkboxAutoStart" text="Auto start all Profiles after module load" />

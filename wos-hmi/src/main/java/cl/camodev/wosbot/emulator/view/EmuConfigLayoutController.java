@@ -65,6 +65,12 @@ public class EmuConfigLayoutController {
 	@FXML
 	private TextField textfieldAutoStartMinutes;
 
+	@FXML
+	private CheckBox checkboxProfileMaxActiveTimeEnabled;
+
+	@FXML
+	private TextField textfieldProfileMaxActiveTimeMinutes;
+
 	private final FileChooser fileChooser = new FileChooser();
 
 	// Fixed list of emulators derived from the enum
@@ -165,6 +171,19 @@ public class EmuConfigLayoutController {
 						EnumConfigurationKey.MAX_RUNNING_EMULATORS_INT.getDefaultValue()));
 		textfieldMaxIdleTime.setText(globalConfig.getOrDefault(EnumConfigurationKey.MAX_IDLE_TIME_INT.name(),
 				EnumConfigurationKey.MAX_IDLE_TIME_INT.getDefaultValue()));
+		checkboxProfileMaxActiveTimeEnabled.setSelected(Boolean.parseBoolean(globalConfig.getOrDefault(
+				EnumConfigurationKey.PROFILE_MAX_ACTIVE_TIME_ENABLED_BOOL.name(),
+				EnumConfigurationKey.PROFILE_MAX_ACTIVE_TIME_ENABLED_BOOL.getDefaultValue())));
+		textfieldProfileMaxActiveTimeMinutes.setText(globalConfig.getOrDefault(
+				EnumConfigurationKey.PROFILE_MAX_ACTIVE_TIME_MINUTES_INT.name(),
+				EnumConfigurationKey.PROFILE_MAX_ACTIVE_TIME_MINUTES_INT.getDefaultValue()));
+		textfieldProfileMaxActiveTimeMinutes.setDisable(!checkboxProfileMaxActiveTimeEnabled.isSelected());
+
+		textfieldProfileMaxActiveTimeMinutes.textProperty().addListener((obs, oldVal, newVal) -> {
+			if (!newVal.matches("\\d*")) {
+				textfieldProfileMaxActiveTimeMinutes.setText(newVal.replaceAll("[^\\d]", ""));
+			}
+		});
 
 		// Auto-save max concurrent instances on focus lost
 		textfieldMaxConcurrentInstances.focusedProperty().addListener((obs, oldVal, newVal) -> {
@@ -185,6 +204,24 @@ public class EmuConfigLayoutController {
 					ServScheduler.getServices().saveEmulatorPath(
 							EnumConfigurationKey.MAX_IDLE_TIME_INT.name(), val);
 				}
+			}
+		});
+
+		checkboxProfileMaxActiveTimeEnabled.selectedProperty().addListener((obs, oldVal, newVal) -> {
+			textfieldProfileMaxActiveTimeMinutes.setDisable(!newVal);
+			ServScheduler.getServices().saveEmulatorPath(
+					EnumConfigurationKey.PROFILE_MAX_ACTIVE_TIME_ENABLED_BOOL.name(), String.valueOf(newVal));
+		});
+
+		textfieldProfileMaxActiveTimeMinutes.focusedProperty().addListener((obs, oldVal, newVal) -> {
+			if (!newVal) {
+				String val = textfieldProfileMaxActiveTimeMinutes.getText();
+				if (val == null || val.isEmpty() || Integer.parseInt(val) <= 0) {
+					val = EnumConfigurationKey.PROFILE_MAX_ACTIVE_TIME_MINUTES_INT.getDefaultValue();
+					textfieldProfileMaxActiveTimeMinutes.setText(val);
+				}
+				ServScheduler.getServices().saveEmulatorPath(
+						EnumConfigurationKey.PROFILE_MAX_ACTIVE_TIME_MINUTES_INT.name(), val);
 			}
 		});
 
