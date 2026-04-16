@@ -234,7 +234,7 @@ public class NavigationHelper {
                     emulatorNumber,
                     EVENT_SWIPE_LEFT_START,
                     EVENT_SWIPE_LEFT_END);
-            sleep(300);
+            sleep(400);
         }
 
         // Search while swiping right
@@ -254,7 +254,7 @@ public class NavigationHelper {
                     emulatorNumber,
                     EVENT_SWIPE_RIGHT_START,
                     EVENT_SWIPE_RIGHT_END);
-            sleep(300);
+            sleep(400);
         }
 
         logDebug("Event tab not found after " + MAX_EVENT_SWIPE_ATTEMPTS + " swipe attempts");
