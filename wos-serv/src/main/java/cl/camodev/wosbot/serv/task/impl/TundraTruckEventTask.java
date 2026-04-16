@@ -119,7 +119,7 @@ public class TundraTruckEventTask extends DelayedTask {
 					return;
 
 				case FAILURE:
-					logDebug("Navigation failed (attempt " + (attempt + 1) + "/" + MAX_NAVIGATION_ATTEMPTS + ")");
+					logError("Navigation failed (attempt " + (attempt + 1) + "/" + MAX_NAVIGATION_ATTEMPTS + ")");
 					if (attempt < MAX_NAVIGATION_ATTEMPTS - 1) {
 						sleepTask(300);
 						tapBackButton();
@@ -329,7 +329,7 @@ public class TundraTruckEventTask extends DelayedTask {
 						.withMaxResults(3)
 						.build());
 
-		logDebug("Searching for arrived trucks");
+		logInfo("Searching for arrived trucks");
 
 		if (arrivedsTruck.isEmpty())
 			logInfo("No arrived trucks found.");
@@ -530,7 +530,7 @@ public class TundraTruckEventTask extends DelayedTask {
 		// If SSR required, find one
 		if (truckSSR && !findSSRTruck()) {
 			logInfo("SSR truck not found and required. Skipping " + side + " truck.");
-			return false;
+			// We send what we found instead of skipping entirely
 		}
 
 		logInfo("Sending " + side + " truck" + (truckSSR ? " (SSR)" : ""));
