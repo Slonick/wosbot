@@ -34,14 +34,12 @@
                         <!-- Task Statistics Card -->
                         <VBox styleClass="content-card" VBox.vgrow="ALWAYS">
                             <children>
-                                <HBox maxWidth="1.7976931348623157E308" styleClass="header-yellow">
-                                    <children>
-                                        <Label text="Task Execution Statistics" />
-                                    </children>
-                                </HBox>
-                                <VBox style="-fx-padding: 0;">
+                                <VBox style="-fx-padding: 0;" VBox.vgrow="ALWAYS">
                                     <children>
                                         <TableView fx:id="tableTasks" minHeight="300.0" prefHeight="450.0" VBox.vgrow="ALWAYS">
+                                            <columnResizePolicy>
+                                                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                                            </columnResizePolicy>
                                             <columns>
                                                 <TableColumn fx:id="colTaskName" prefWidth="200.0" text="Task Name" />
                                                 <TableColumn fx:id="colRuns" prefWidth="80.0" text="Runs" />

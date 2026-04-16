@@ -4,8 +4,8 @@ import cl.camodev.wosbot.console.enumerable.EnumTaskFlowNodeType;
 import cl.camodev.wosbot.ot.TaskFlowDefinition;
 import cl.camodev.wosbot.ot.TaskFlowNode;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Generates a compilable Java source file from a {@link TaskFlowDefinition}.
@@ -117,17 +117,26 @@ public class TaskCodeGenerator {
     // ========================================================================
 
     private void emitExecuteMethod(StringBuilder code, TaskFlowDefinition definition, String taskName) {
-        code.append(INDENT).append("@Override\n");
-        code.append(INDENT).append("protected void execute() {\n");
-        code.append(INDENT2).append("logInfo(\"Starting task: '").append(taskName).append("'\");\n");
-
-        // Build node map for navigation
+        // Detect back-edges (loops) for guard generation
+        List<LoopDetector.BackEdge> backEdges = LoopDetector.detectBackEdges(definition);
         Map<Integer, TaskFlowNode> nodeMap = new LinkedHashMap<>();
         for (TaskFlowNode n : definition.getNodes()) {
             nodeMap.put(n.getId(), n);
         }
+        // Build a lookup: sourceId → list of back-edges originating from that node
+        Map<Integer, List<LoopDetector.BackEdge>> backEdgesBySource = backEdges.stream()
+                .collect(Collectors.groupingBy(LoopDetector.BackEdge::sourceId));
+
+        code.append(INDENT).append("@Override\n");
+        code.append(INDENT).append("protected void execute() {\n");
+        code.append(INDENT2).append("logInfo(\"Starting task: '").append(taskName).append("'\");\n");
 
         int firstId = definition.getNodes().isEmpty() ? -1 : definition.getNodes().get(0).getId();
+
+        // Emit loop counter variables for each detected back-edge
+        for (LoopDetector.BackEdge be : backEdges) {
+            code.append(INDENT2).append("int __loopCount_").append(be.key()).append(" = 0;\n");
+        }
 
         // State machine loop
         code.append(INDENT2).append("int __state = ").append(firstId < 0 ? "-1" : String.valueOf(firstId)).append(";\n");
@@ -136,7 +145,7 @@ public class TaskCodeGenerator {
         code.append(INDENT3).append("switch (__state) {\n");
 
         for (TaskFlowNode node : definition.getNodes()) {
-            emitNodeCase(code, node);
+            emitNodeCase(code, node, backEdgesBySource.getOrDefault(node.getId(), Collections.emptyList()), nodeMap);
         }
 
         code.append(INDENT4).append("default: __state = -1; break;\n");
@@ -166,7 +175,9 @@ public class TaskCodeGenerator {
     // Individual node case emitters
     // ========================================================================
 
-    private void emitNodeCase(StringBuilder code, TaskFlowNode node) {
+    private void emitNodeCase(StringBuilder code, TaskFlowNode node,
+                              List<LoopDetector.BackEdge> nodeBackEdges,
+                              Map<Integer, TaskFlowNode> nodeMap) {
         code.append(INDENT4).append("case ").append(node.getId()).append(": {\n");
         code.append(INDENT5).append("// ").append(node.getType().getDisplayName()).append("\n");
 
@@ -175,16 +186,21 @@ public class TaskCodeGenerator {
             case WAIT            -> emitWait(code, node);
             case SWIPE           -> emitSwipe(code, node);
             case BACK_BUTTON     -> emitBackButton(code, node);
-            case OCR_READ        -> emitOcrRead(code, node);
-            case TEMPLATE_SEARCH -> emitTemplateSearch(code, node);
+            case OCR_READ        -> emitOcrRead(code, node, nodeBackEdges);
+            case TEMPLATE_SEARCH -> emitTemplateSearch(code, node, nodeBackEdges);
             default              -> code.append(INDENT5).append("// Unknown action\n");
         }
 
-        // Non-branching nodes: emit next state transition
+        // Non-branching nodes: emit next state transition (with loop guard if back-edge)
         if (node.getType() != EnumTaskFlowNodeType.OCR_READ
                 && node.getType() != EnumTaskFlowNodeType.TEMPLATE_SEARCH) {
             int nextId = node.getNextNodeId();
-            code.append(INDENT5).append("__state = ").append(nextId > 0 ? nextId : -1).append(";\n");
+            LoopDetector.BackEdge trueBackEdge = findBackEdge(nodeBackEdges, false);
+            if (trueBackEdge != null && nextId > 0) {
+                emitLoopGuardedTransition(code, node, trueBackEdge, nextId, -1);
+            } else {
+                code.append(INDENT5).append("__state = ").append(nextId > 0 ? nextId : -1).append(";\n");
+            }
         }
 
         code.append(INDENT5).append("break;\n");
@@ -234,7 +250,7 @@ public class TaskCodeGenerator {
 
     // ── OCR Read (branching) ───────────────────────────────────────────────
 
-    private void emitOcrRead(StringBuilder code, TaskFlowNode node) {
+    private void emitOcrRead(StringBuilder code, TaskFlowNode node, List<LoopDetector.BackEdge> nodeBackEdges) {
         String cond     = node.getParam("condition") != null ? node.getParam("condition") : "CONTAINS";
         String expected = node.getParam("expectedValue") != null ? node.getParam("expectedValue") : "";
         int tX = node.getParamAsInt("tlX", 0);
@@ -260,10 +276,21 @@ public class TaskCodeGenerator {
 
         String condExpr = buildOcrConditionExpression(varName, cond, expected);
 
+        LoopDetector.BackEdge trueBackEdge  = findBackEdge(nodeBackEdges, false);
+        LoopDetector.BackEdge falseBackEdge = findBackEdge(nodeBackEdges, true);
+
         code.append(INDENT5).append("if (").append(condExpr).append(") {\n");
-        code.append(INDENT5).append(INDENT).append("__state = ").append(trueNext > 0 ? trueNext : -1).append(";\n");
+        if (trueBackEdge != null && trueNext > 0) {
+            emitLoopGuardedTransitionInBranch(code, node, trueBackEdge, trueNext, falseNext > 0 ? falseNext : -1);
+        } else {
+            code.append(INDENT5).append(INDENT).append("__state = ").append(trueNext > 0 ? trueNext : -1).append(";\n");
+        }
         code.append(INDENT5).append("} else {\n");
-        code.append(INDENT5).append(INDENT).append("__state = ").append(falseNext > 0 ? falseNext : -1).append(";\n");
+        if (falseBackEdge != null && falseNext > 0) {
+            emitLoopGuardedTransitionInBranch(code, node, falseBackEdge, falseNext, trueNext > 0 ? trueNext : -1);
+        } else {
+            code.append(INDENT5).append(INDENT).append("__state = ").append(falseNext > 0 ? falseNext : -1).append(";\n");
+        }
         code.append(INDENT5).append("}\n");
     }
 
@@ -279,7 +306,7 @@ public class TaskCodeGenerator {
 
     // ── Template Search (branching) ────────────────────────────────────────
 
-    private void emitTemplateSearch(StringBuilder code, TaskFlowNode node) {
+    private void emitTemplateSearch(StringBuilder code, TaskFlowNode node, List<LoopDetector.BackEdge> nodeBackEdges) {
         String tmpl = node.getParam("templatePath");
         if (tmpl == null) tmpl = "GAME_HOME_FURNACE";
 
@@ -313,6 +340,9 @@ public class TaskCodeGenerator {
         code.append(INDENT5).append(INDENT).append("logInfo(\"Template search failed: \" + __tplEx.getMessage());\n");
         code.append(INDENT5).append("}\n");
 
+        LoopDetector.BackEdge trueBackEdge  = findBackEdge(nodeBackEdges, false);
+        LoopDetector.BackEdge falseBackEdge = findBackEdge(nodeBackEdges, true);
+
         // Branching + optional tap
         code.append(INDENT5).append("if (").append(varName).append(" != null && ").append(varName).append(".isFound()) {\n");
 
@@ -320,9 +350,17 @@ public class TaskCodeGenerator {
             emitTapIfFound(code, node, varName, offsetX, offsetY);
         }
 
-        code.append(INDENT5).append(INDENT).append("__state = ").append(trueNext > 0 ? trueNext : -1).append(";\n");
+        if (trueBackEdge != null && trueNext > 0) {
+            emitLoopGuardedTransitionInBranch(code, node, trueBackEdge, trueNext, falseNext > 0 ? falseNext : -1);
+        } else {
+            code.append(INDENT5).append(INDENT).append("__state = ").append(trueNext > 0 ? trueNext : -1).append(";\n");
+        }
         code.append(INDENT5).append("} else {\n");
-        code.append(INDENT5).append(INDENT).append("__state = ").append(falseNext > 0 ? falseNext : -1).append(";\n");
+        if (falseBackEdge != null && falseNext > 0) {
+            emitLoopGuardedTransitionInBranch(code, node, falseBackEdge, falseNext, trueNext > 0 ? trueNext : -1);
+        } else {
+            code.append(INDENT5).append(INDENT).append("__state = ").append(falseNext > 0 ? falseNext : -1).append(";\n");
+        }
         code.append(INDENT5).append("}\n");
     }
 
@@ -386,5 +424,71 @@ public class TaskCodeGenerator {
             code.append(INDENT5).append(INDENT).append("emuManager.tapAtPoint(EMULATOR_NUMBER, ")
                 .append(varName).append(".getPoint());\n");
         }
+    }
+
+    // ========================================================================
+    // Loop guard helpers
+    // ========================================================================
+
+    /**
+     * Finds a back-edge in the list matching the given branch type.
+     */
+    private LoopDetector.BackEdge findBackEdge(List<LoopDetector.BackEdge> edges, boolean isFalseBranch) {
+        for (LoopDetector.BackEdge be : edges) {
+            if (be.isFalseBranch() == isFalseBranch) return be;
+        }
+        return null;
+    }
+
+    /**
+     * Emits a loop-guarded state transition for non-branching nodes.
+     * Used at the INDENT5 level (inside a case block, top level).
+     */
+    private void emitLoopGuardedTransition(StringBuilder code, TaskFlowNode node,
+                                            LoopDetector.BackEdge backEdge,
+                                            int backTarget, int forwardTarget) {
+        int maxIter   = node.getParamAsInt("loopMaxIterations", 10);
+        int delayMs   = node.getParamAsInt("loopDelayMs", 500);
+        String action = node.getParam("loopExhaustedAction");
+        boolean continueForward = "CONTINUE".equals(action);
+
+        String counterVar = "__loopCount_" + backEdge.key();
+
+        code.append(INDENT5).append(counterVar).append("++;\n");
+        code.append(INDENT5).append("if (").append(counterVar).append(" > ").append(maxIter).append(") {\n");
+        code.append(INDENT5).append(INDENT).append("logInfo(\"Loop limit reached (").append(maxIter).append(" iterations)\");\n");
+        code.append(INDENT5).append(INDENT).append("__state = ").append(continueForward && forwardTarget > 0 ? forwardTarget : -1).append(";\n");
+        code.append(INDENT5).append("} else {\n");
+        if (delayMs > 0) {
+            code.append(INDENT5).append(INDENT).append("sleepTask(").append(delayMs).append("L);\n");
+        }
+        code.append(INDENT5).append(INDENT).append("__state = ").append(backTarget).append(";\n");
+        code.append(INDENT5).append("}\n");
+    }
+
+    /**
+     * Emits a loop-guarded state transition inside a branch (if/else block).
+     * Used at the INDENT5 + INDENT level (inside a branch body).
+     */
+    private void emitLoopGuardedTransitionInBranch(StringBuilder code, TaskFlowNode node,
+                                                    LoopDetector.BackEdge backEdge,
+                                                    int backTarget, int forwardTarget) {
+        int maxIter   = node.getParamAsInt("loopMaxIterations", 10);
+        int delayMs   = node.getParamAsInt("loopDelayMs", 500);
+        String action = node.getParam("loopExhaustedAction");
+        boolean continueForward = "CONTINUE".equals(action);
+
+        String counterVar = "__loopCount_" + backEdge.key();
+
+        code.append(INDENT5).append(INDENT).append(counterVar).append("++;\n");
+        code.append(INDENT5).append(INDENT).append("if (").append(counterVar).append(" > ").append(maxIter).append(") {\n");
+        code.append(INDENT5).append(INDENT).append(INDENT).append("logInfo(\"Loop limit reached (").append(maxIter).append(" iterations)\");\n");
+        code.append(INDENT5).append(INDENT).append(INDENT).append("__state = ").append(continueForward && forwardTarget > 0 ? forwardTarget : -1).append(";\n");
+        code.append(INDENT5).append(INDENT).append("} else {\n");
+        if (delayMs > 0) {
+            code.append(INDENT5).append(INDENT).append(INDENT).append("sleepTask(").append(delayMs).append("L);\n");
+        }
+        code.append(INDENT5).append(INDENT).append(INDENT).append("__state = ").append(backTarget).append(";\n");
+        code.append(INDENT5).append(INDENT).append("}\n");
     }
 }

@@ -98,12 +98,25 @@ public class TaskBuilderWireManager {
         dragWire.setEndX(mouseX);
         dragWire.setEndY(mouseY);
 
-        double dx = mouseX - dragWire.getStartX();
-        double cpOffset = Math.max(40, Math.abs(dx) * 0.4);
-        dragWire.setControlX1(dragWire.getStartX() + cpOffset);
-        dragWire.setControlY1(dragWire.getStartY());
-        dragWire.setControlX2(mouseX - cpOffset);
-        dragWire.setControlY2(mouseY);
+        double deltaX = mouseX - dragWire.getStartX();
+        double deltaY = mouseY - dragWire.getStartY();
+        
+        if (deltaX < 30) {
+            double yDir = (deltaY < -40) ? -1 : 1; 
+            double hOffset = Math.max(90, Math.abs(deltaX) * 0.15);
+            double vOffset = Math.max(140, Math.abs(deltaX) * 0.15 + Math.abs(deltaY) * 0.1);
+            
+            dragWire.setControlX1(dragWire.getStartX() + hOffset);
+            dragWire.setControlY1(dragWire.getStartY() + (vOffset * yDir));
+            dragWire.setControlX2(mouseX - hOffset);
+            dragWire.setControlY2(mouseY + (vOffset * yDir));
+        } else {
+            double offset = Math.max(60, deltaX * 0.45);
+            dragWire.setControlX1(dragWire.getStartX() + offset);
+            dragWire.setControlY1(dragWire.getStartY());
+            dragWire.setControlX2(mouseX - offset);
+            dragWire.setControlY2(mouseY);
+        }
     }
 
     /**
@@ -228,18 +241,33 @@ public class TaskBuilderWireManager {
         double endX   = to.getLayoutX();
         double endY   = to.getLayoutY();
 
-        double dx = endX - startX;
-        double cpOffset = Math.max(50, Math.abs(dx) * 0.45);
+        double deltaX = endX - startX;
+        double deltaY = endY - startY;
 
         CubicCurve wire = new CubicCurve();
         wire.setStartX(startX);
         wire.setStartY(startY);
         wire.setEndX(endX);
         wire.setEndY(endY);
-        wire.setControlX1(startX + cpOffset);
-        wire.setControlY1(startY);
-        wire.setControlX2(endX - cpOffset);
-        wire.setControlY2(endY);
+        
+        if (deltaX < 30) {
+            double yDir = (deltaY < -40) ? -1 : 1; 
+            double hOffset = Math.max(90, Math.abs(deltaX) * 0.15);
+            double vOffset = Math.max(140, Math.abs(deltaX) * 0.15 + Math.abs(deltaY) * 0.1);
+            
+            wire.setControlX1(startX + hOffset);
+            wire.setControlY1(startY + (vOffset * yDir));
+            wire.setControlX2(endX - hOffset);
+            wire.setControlY2(endY + (vOffset * yDir));
+        } else {
+            // Forward edge logic
+            double offset = Math.max(60, deltaX * 0.45);
+            wire.setControlX1(startX + offset);
+            wire.setControlY1(startY);
+            wire.setControlX2(endX - offset);
+            wire.setControlY2(endY);
+        }
+
         wire.setFill(null);
         wire.setStroke(Color.web(color));
         wire.setStrokeWidth(2);

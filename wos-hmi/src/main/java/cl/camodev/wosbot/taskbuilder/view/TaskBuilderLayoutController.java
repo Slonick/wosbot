@@ -957,11 +957,24 @@ public class TaskBuilderLayoutController {
         dragWire.setEndX(mx);
         dragWire.setEndY(my);
         double deltaX = mx - dragWire.getStartX();
-        double offset = Math.max(80, Math.abs(deltaX) / 2.0);
-        dragWire.setControlX1(dragWire.getStartX() + offset);
-        dragWire.setControlY1(dragWire.getStartY());
-        dragWire.setControlX2(mx - offset);
-        dragWire.setControlY2(my);
+        double deltaY = my - dragWire.getStartY();
+        
+        if (deltaX < 30) {
+            double yDir = (deltaY < -40) ? -1 : 1; 
+            double hOffset = Math.max(90, Math.abs(deltaX) * 0.15);
+            double vOffset = Math.max(140, Math.abs(deltaX) * 0.15 + Math.abs(deltaY) * 0.1);
+            
+            dragWire.setControlX1(dragWire.getStartX() + hOffset);
+            dragWire.setControlY1(dragWire.getStartY() + (vOffset * yDir));
+            dragWire.setControlX2(mx - hOffset);
+            dragWire.setControlY2(my + (vOffset * yDir));
+        } else {
+            double offset = Math.max(60, deltaX * 0.45);
+            dragWire.setControlX1(dragWire.getStartX() + offset);
+            dragWire.setControlY1(dragWire.getStartY());
+            dragWire.setControlX2(mx - offset);
+            dragWire.setControlY2(my);
+        }
     }
 
     private void finishConnectionDrag(MouseEvent e) {
@@ -989,10 +1002,33 @@ public class TaskBuilderLayoutController {
             }
         }
         if (dragWire != null) { flowCanvas.getChildren().remove(dragWire); dragWire = null; }
+
+        // Check if this new connection creates a back-edge (loop)
+        boolean isLoop = false;
+        if (dragWireSourceId > 0) {
+            TaskFlowDefinition def = builderService.getCurrentDefinition();
+            if (def != null) {
+                isLoop = cl.camodev.wosbot.serv.impl.LoopDetector.isBackEdge(def, dragWireSourceId, targetId);
+                if (isLoop) {
+                    // Set default loop guard params on the source node if not already set
+                    TaskFlowNode src = findNode(dragWireSourceId);
+                    if (src != null) {
+                        if (src.getParam("loopMaxIterations") == null) src.setParam("loopMaxIterations", "10");
+                        if (src.getParam("loopDelayMs") == null) src.setParam("loopDelayMs", "500");
+                        if (src.getParam("loopExhaustedAction") == null) src.setParam("loopExhaustedAction", "END");
+                    }
+                }
+            }
+        }
+
         dragWireSourceId = -1;
         dragWireIsFalseBranch = false;
         rebuildAllWires();
-        setStatus("Connected");
+        if (isLoop) {
+            setStatus("⚠ Loop detected! Click the loop label on the wire to configure max iterations.");
+        } else {
+            setStatus("Connected");
+        }
     }
 
     private void cancelDrag() {
@@ -1009,17 +1045,36 @@ public class TaskBuilderLayoutController {
         TaskFlowDefinition def = builderService.getCurrentDefinition();
         if (def == null) return;
 
+        // Detect back-edges for loop visualization
+        Set<String> backEdgeKeys = new HashSet<>();
+        Map<String, cl.camodev.wosbot.serv.impl.LoopDetector.BackEdge> backEdgeMap = new HashMap<>();
+        for (cl.camodev.wosbot.serv.impl.LoopDetector.BackEdge be : cl.camodev.wosbot.serv.impl.LoopDetector.detectBackEdges(def)) {
+            String edgeKey = be.isFalseBranch()
+                    ? be.sourceId() + "-F->" + be.targetId()
+                    : be.sourceId() + "->" + be.targetId();
+            backEdgeKeys.add(edgeKey);
+            backEdgeMap.put(edgeKey, be);
+        }
+
         for (TaskFlowNode n : def.getNodes()) {
             // True / default branch
             if (n.getNextNodeId() > 0) {
                 String wireKey = n.getId() + "->" + n.getNextNodeId();
                 boolean isBranching = (n.getType() == EnumTaskFlowNodeType.OCR_READ || n.getType() == EnumTaskFlowNodeType.TEMPLATE_SEARCH);
-                String color = isBranching ? "#59ba59" : "#4a5568";
+                boolean isLoop = backEdgeKeys.contains(wireKey);
+                String color = isLoop ? "#f59e0b" : (isBranching ? "#59ba59" : "#4a5568");
                 CubicCurve w = makeWire(outputPorts.get(n.getId()), inputPorts.get(n.getNextNodeId()), color);
                 if (w != null) {
+                    if (isLoop) {
+                        w.getStrokeDashArray().addAll(8.0, 5.0);
+                        w.setStrokeWidth(3.0);
+                    }
                     connectionWires.put(wireKey, w);
                     flowCanvas.getChildren().add(0, w);
-                    if (isBranching) {
+                    if (isLoop) {
+                        int maxIter = n.getParamAsInt("loopMaxIterations", 10);
+                        addEditableLoopLabel(w, maxIter, n, wireKey);
+                    } else if (isBranching) {
                         String lbl = n.getType() == EnumTaskFlowNodeType.TEMPLATE_SEARCH ? "Found" : "Yes";
                         addWireLabel(w, lbl, "#59ba59", wireKey);
                     }
@@ -1028,12 +1083,23 @@ public class TaskBuilderLayoutController {
             // False / "No" branch (OCR, Template Search)
             if (n.getNextNodeFalseId() > 0) {
                 String wireKey = n.getId() + "-F->" + n.getNextNodeFalseId();
-                CubicCurve w = makeWire(outputPortsFalse.get(n.getId()), inputPorts.get(n.getNextNodeFalseId()), "#e74c3c");
+                boolean isLoop = backEdgeKeys.contains(wireKey);
+                String color = isLoop ? "#f59e0b" : "#e74c3c";
+                CubicCurve w = makeWire(outputPortsFalse.get(n.getId()), inputPorts.get(n.getNextNodeFalseId()), color);
                 if (w != null) {
+                    if (isLoop) {
+                        w.getStrokeDashArray().addAll(8.0, 5.0);
+                        w.setStrokeWidth(3.0);
+                    }
                     connectionWires.put(wireKey, w);
                     flowCanvas.getChildren().add(0, w);
-                    String lbl = n.getType() == EnumTaskFlowNodeType.TEMPLATE_SEARCH ? "Not Found" : "No";
-                    addWireLabel(w, lbl, "#e74c3c", wireKey);
+                    if (isLoop) {
+                        int maxIter = n.getParamAsInt("loopMaxIterations", 10);
+                        addEditableLoopLabel(w, maxIter, n, wireKey);
+                    } else {
+                        String lbl = n.getType() == EnumTaskFlowNodeType.TEMPLATE_SEARCH ? "Not Found" : "No";
+                        addWireLabel(w, lbl, "#e74c3c", wireKey);
+                    }
                 }
             }
         }
@@ -1057,6 +1123,85 @@ public class TaskBuilderLayoutController {
                 flowCanvas.getChildren().add(0, sw);
             }
         }
+    }
+
+    /**
+     * Adds an editable loop label on a back-edge wire.
+     * The label shows "🔁 Loop (max N)" and is clickable — clicking it
+     * opens an inline text field to change the max iteration count.
+     */
+    private void addEditableLoopLabel(CubicCurve wire, int maxIter, TaskFlowNode sourceNode, String wireKey) {
+        // Bezier midpoint at t=0.5
+        double mx = 0.125 * wire.getStartX() + 0.375 * wire.getControlX1()
+                  + 0.375 * wire.getControlX2() + 0.125 * wire.getEndX();
+        double my = 0.125 * wire.getStartY() + 0.375 * wire.getControlY1()
+                  + 0.375 * wire.getControlY2() + 0.125 * wire.getEndY();
+
+        String labelText = "🔁 Loop (max " + maxIter + ")";
+        double bgW = labelText.length() * 7.5 + 24;
+        double bgH = 24;
+        double bgX = mx - bgW / 2;
+        double bgY = my - bgH / 2 - 2;
+
+        javafx.scene.shape.Rectangle bg = new javafx.scene.shape.Rectangle(bgX, bgY, bgW, bgH);
+        bg.setFill(Color.web("#1e1e1e"));
+        bg.setStroke(Color.web("#f59e0b"));
+        bg.setStrokeWidth(2);
+        bg.setArcWidth(10); bg.setArcHeight(10);
+        bg.setCursor(Cursor.HAND);
+
+        javafx.scene.text.Text lbl = new javafx.scene.text.Text(labelText);
+        lbl.setStyle("-fx-font-size: 11px; -fx-font-weight: bold;");
+        lbl.setFill(Color.web("#f59e0b"));
+        lbl.setMouseTransparent(true);
+        lbl.setX(bgX + 12);
+        lbl.setY(bgY + 16);
+
+        // Click to edit max iterations
+        bg.setOnMouseClicked(e -> {
+            e.consume();
+            javafx.scene.control.TextField editField = new javafx.scene.control.TextField(String.valueOf(maxIter));
+            editField.setLayoutX(bgX);
+            editField.setLayoutY(bgY);
+            editField.setPrefWidth(bgW);
+            editField.setPrefHeight(bgH);
+            editField.setStyle("-fx-background-color: #2d3748; -fx-text-fill: #f59e0b; -fx-border-color: #f59e0b; -fx-border-radius: 5;");
+            
+            editField.setOnAction(ev -> {
+                try {
+                    int newMax = Integer.parseInt(editField.getText().trim());
+                    sourceNode.setParam("loopMaxIterations", String.valueOf(newMax));
+                    rebuildAllWires();
+                } catch (NumberFormatException ex) {
+                    rebuildAllWires(); // restore original
+                }
+            });
+            
+            editField.focusedProperty().addListener((obs, oldV, newV) -> {
+                if (!newV) {
+                    try {
+                        int newMax = Integer.parseInt(editField.getText().trim());
+                        sourceNode.setParam("loopMaxIterations", String.valueOf(newMax));
+                    } catch (NumberFormatException ex) {}
+                    rebuildAllWires();
+                }
+            });
+
+            flowCanvas.getChildren().remove(bg);
+            flowCanvas.getChildren().remove(lbl);
+            flowCanvas.getChildren().add(editField);
+            wireOverlays.add(editField);
+            editField.requestFocus();
+            editField.selectAll();
+        });
+
+        // Hover effects
+        bg.setOnMouseEntered(e -> bg.setFill(Color.web("#2d3748")));
+        bg.setOnMouseExited(e -> bg.setFill(Color.web("#1e1e1e")));
+
+        wireOverlays.add(bg);
+        wireOverlays.add(lbl);
+        flowCanvas.getChildren().addAll(bg, lbl);
     }
 
     private void addWireLabel(CubicCurve wire, String text, String color, String key) {
@@ -1097,12 +1242,26 @@ public class TaskBuilderLayoutController {
         w.setMouseTransparent(true);
         w.setStartX(from.getCenterX()); w.setStartY(from.getCenterY());
         w.setEndX(to.getCenterX()); w.setEndY(to.getCenterY());
+        
         double deltaX = w.getEndX() - w.getStartX();
-        double offset = Math.max(80, Math.abs(deltaX) / 2.0);
-        w.setControlX1(w.getStartX() + offset);
-        w.setControlY1(w.getStartY());
-        w.setControlX2(w.getEndX() - offset);
-        w.setControlY2(w.getEndY());
+        double deltaY = w.getEndY() - w.getStartY();
+        
+        if (deltaX < 30) {
+            double yDir = (deltaY < -40) ? -1 : 1; 
+            double hOffset = Math.max(90, Math.abs(deltaX) * 0.15);
+            double vOffset = Math.max(140, Math.abs(deltaX) * 0.15 + Math.abs(deltaY) * 0.1);
+            
+            w.setControlX1(w.getStartX() + hOffset);
+            w.setControlY1(w.getStartY() + (vOffset * yDir));
+            w.setControlX2(w.getEndX() - hOffset);
+            w.setControlY2(w.getEndY() + (vOffset * yDir));
+        } else {
+            double offset = Math.max(60, deltaX * 0.45);
+            w.setControlX1(w.getStartX() + offset);
+            w.setControlY1(w.getStartY());
+            w.setControlX2(w.getEndX() - offset);
+            w.setControlY2(w.getEndY());
+        }
         return w;
     }
 

@@ -218,21 +218,17 @@ public class StatisticsLayoutController extends AbstractProfileController {
     private VBox createSummaryCard(String title, String value, String accentColor) {
         VBox card = new VBox(4);
         card.setAlignment(Pos.CENTER);
-        card.setPadding(new Insets(12, 18, 12, 18));
-        card.setStyle("-fx-background-color: #242424; -fx-background-radius: 8; -fx-border-color: #333; -fx-border-radius: 8;");
-        card.setMinWidth(120);
+        card.getStyleClass().add("stat-summary-card");
         HBox.setHgrow(card, Priority.ALWAYS);
 
-        Label lblTitle = new Label(title);
-        lblTitle.setStyle("-fx-text-fill: #a0a0a0; -fx-font-size: 11px;");
+        Label lblTitle = new Label(title.toUpperCase());
+        lblTitle.getStyleClass().add("stat-title");
 
         Label lblValue = new Label(value);
-        lblValue.setStyle("-fx-text-fill: " + accentColor + "; -fx-font-size: 22px; -fx-font-weight: bold;");
+        lblValue.getStyleClass().add("stat-value");
+        lblValue.setStyle("-fx-text-fill: " + accentColor + ";");
 
         card.getChildren().addAll(lblTitle, lblValue);
-
-        card.setOnMouseEntered(e -> card.setStyle("-fx-background-color: #2a2a2a; -fx-background-radius: 8; -fx-border-color: #444; -fx-border-radius: 8;"));
-        card.setOnMouseExited(e -> card.setStyle("-fx-background-color: #242424; -fx-background-radius: 8; -fx-border-color: #333; -fx-border-radius: 8;"));
 
         return card;
     }
@@ -272,7 +268,7 @@ public class StatisticsLayoutController extends AbstractProfileController {
             TitledPane titledPane = new TitledPane(category + " (" + counters.size() + ")", flowPane);
             titledPane.setExpanded(true);
             titledPane.setCollapsible(true);
-            titledPane.setStyle("-fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold;");
+            titledPane.getStyleClass().add("stat-titled-pane");
 
             vboxCounterSections.getChildren().add(titledPane);
         }
@@ -281,24 +277,18 @@ public class StatisticsLayoutController extends AbstractProfileController {
     private VBox createCounterCard(String name, Integer value) {
         VBox card = new VBox();
         card.setSpacing(6);
-        card.setPadding(new Insets(12));
-        card.setStyle("-fx-background-color: #242424; -fx-background-radius: 8; -fx-border-color: #333; -fx-border-radius: 8;");
-        card.setPrefWidth(160);
-        card.setMinHeight(80);
+        card.getStyleClass().add("stat-counter-card");
         card.setAlignment(Pos.CENTER);
 
         Label lblName = new Label(name);
-        lblName.setStyle("-fx-text-fill: #a0a0a0; -fx-font-size: 12px; -fx-font-weight: bold;");
+        lblName.getStyleClass().add("counter-name");
         lblName.setWrapText(true);
         lblName.setAlignment(Pos.CENTER);
 
         Label lblValue = new Label(String.valueOf(value));
-        lblValue.setStyle("-fx-text-fill: #ffffff; -fx-font-size: 22px; -fx-font-weight: bold;");
+        lblValue.getStyleClass().add("counter-value");
 
         card.getChildren().addAll(lblName, lblValue);
-
-        card.setOnMouseEntered(e -> card.setStyle("-fx-background-color: #2a2a2a; -fx-background-radius: 8; -fx-border-color: #444; -fx-border-radius: 8;"));
-        card.setOnMouseExited(e -> card.setStyle("-fx-background-color: #242424; -fx-background-radius: 8; -fx-border-color: #333; -fx-border-radius: 8;"));
 
         return card;
     }

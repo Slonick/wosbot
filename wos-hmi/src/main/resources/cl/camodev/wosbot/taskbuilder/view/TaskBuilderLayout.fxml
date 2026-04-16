@@ -162,6 +162,17 @@
                             <TextField fx:id="ocrExpectedField" promptText="expected text…" prefWidth="200" styleClass="tb-text-field"/>
                             <Button text="Apply" onAction="#handleApplyOcrProps" styleClass="tb-btn-primary"/>
                         </FlowPane>
+                        <!-- Loop Guard Properties (visible when back-edge detected) -->
+                        <FlowPane fx:id="ocrLoopPropsBox" hgap="14" vgap="10" alignment="CENTER_LEFT" visible="false" managed="false">
+                            <Label text="🔁 Loop Guard:" styleClass="tb-props-label" style="-fx-font-weight:bold; -fx-text-fill:#f59e0b;"/>
+                            <Label text="Max Iterations:" styleClass="tb-props-label"/>
+                            <TextField fx:id="ocrLoopMaxField" promptText="10" prefWidth="60" styleClass="tb-text-field"/>
+                            <Label text="Delay:" styleClass="tb-props-label"/>
+                            <TextField fx:id="ocrLoopDelayField" promptText="500" prefWidth="70" styleClass="tb-text-field"/>
+                            <Label text="ms" styleClass="tb-props-label"/>
+                            <Label text="On Exhausted:" styleClass="tb-props-label"/>
+                            <ComboBox fx:id="ocrLoopExhaustedCombo" prefWidth="130" styleClass="tb-combo"/>
+                        </FlowPane>
                     </VBox>
                     <!-- TEMPLATE SEARCH Properties -->
                     <VBox fx:id="templatePropsBox" spacing="10" visible="false" managed="false">
@@ -200,6 +211,17 @@
                             <Label text="Y:" styleClass="tb-props-label"/>
                             <TextField fx:id="templateOffsetYField" promptText="0" prefWidth="50" styleClass="tb-text-field"/>
                             <Button text="Apply" onAction="#handleApplyTemplateProps" styleClass="tb-btn-primary"/>
+                        </FlowPane>
+                        <!-- Loop Guard Properties (visible when back-edge detected) -->
+                        <FlowPane fx:id="tplLoopPropsBox" hgap="14" vgap="10" alignment="CENTER_LEFT" visible="false" managed="false">
+                            <Label text="🔁 Loop Guard:" styleClass="tb-props-label" style="-fx-font-weight:bold; -fx-text-fill:#f59e0b;"/>
+                            <Label text="Max Iterations:" styleClass="tb-props-label"/>
+                            <TextField fx:id="tplLoopMaxField" promptText="10" prefWidth="60" styleClass="tb-text-field"/>
+                            <Label text="Delay:" styleClass="tb-props-label"/>
+                            <TextField fx:id="tplLoopDelayField" promptText="500" prefWidth="70" styleClass="tb-text-field"/>
+                            <Label text="ms" styleClass="tb-props-label"/>
+                            <Label text="On Exhausted:" styleClass="tb-props-label"/>
+                            <ComboBox fx:id="tplLoopExhaustedCombo" prefWidth="130" styleClass="tb-combo"/>
                         </FlowPane>
                     </VBox>
                 </VBox>

@@ -142,6 +142,9 @@ public class InitializeTask extends DelayedTask {
 	 * calls within the same execution.
 	 */
 	private void ensureEmulatorRunning() {
+		logInfo("Checking and applying emulator settings...");
+		emuManager.verifyAndApplySettings(EMULATOR_NUMBER);
+
 		logInfo("Checking emulator status...");
 
 		while (!isStarted) {

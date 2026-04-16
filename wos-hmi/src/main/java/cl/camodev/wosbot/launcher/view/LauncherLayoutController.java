@@ -469,10 +469,23 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
 
         addPinnedButton("Control", MaterialDesignC.CONTROLLER_CLASSIC, controlTabs);
 
-        // Config pinned button
+        // Config pinned button — TabPane with Emulators + Telegram
         EmuConfigLayoutController configCtrl = new EmuConfigLayoutController();
         Parent configPane = loadNode("EmuConfigLayout", configCtrl);
-        addPinnedButton("Config", MaterialDesignC.COG_OUTLINE, configPane);
+
+        TelegramLayoutController telegramCtrl = new TelegramLayoutController();
+        Parent telegramPane = loadNode("TelegramLayout", telegramCtrl);
+
+        TabPane configTabs = new TabPane();
+        configTabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+        configTabs.getTabs().addAll(
+                makeTab("Emulators", configPane),
+                makeTab("Telegram", telegramPane)
+        );
+        configTabs.setMaxWidth(Double.MAX_VALUE);
+        configTabs.setMaxHeight(Double.MAX_VALUE);
+
+        addPinnedButton("Config", MaterialDesignC.COG_OUTLINE, configTabs);
     }
 
     private Tab makeTab(String title, Parent content) {
@@ -600,7 +613,7 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
                 new ModuleDefinition("GiftcodeLayout",           "Get Giftcodes",        MaterialDesignG.GIFT_OUTLINE,               GiftcodeLayoutController::new),
                 new ModuleDefinition("DebuggingLayout",          "Debugging",            MaterialDesignB.BUG_OUTLINE,                DebuggingLayoutController::new),
                 new ModuleDefinition("TaskBuilderLayout",        "Task Builder",         MaterialDesignW.WRENCH_OUTLINE,             TaskBuilderLayoutController::new),
-                new ModuleDefinition("TelegramLayout",           "Telegram",             MaterialDesignT.TELEGRAM,                   TelegramLayoutController::new),
+
                 new ModuleDefinition("SkipTutorialLayout",       "Skip Tutorial",        MaterialDesignS.SKIP_NEXT_OUTLINE,          SkipTutorialLayoutController::new),
                 new ModuleDefinition("CharacterLayout",          "Character",            MaterialDesignA.ACCOUNT_OUTLINE,            CharacterLayoutController::new),
                 new ModuleDefinition("StatisticsLayout",         "Statistics",           MaterialDesignV.VIEW_DASHBOARD_OUTLINE,     StatisticsLayoutController::new)
