@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -63,6 +64,7 @@ public class TaskQueue {
 
     // Track currently executing task context for preemption
     private volatile ExecutionContext currentExecutionContext;
+    private volatile LocalDateTime activeSessionStartedAt;
 
     public TaskQueue(DTOProfiles profile) {
         this.profile = profile;
@@ -251,6 +253,10 @@ public class TaskQueue {
             } else if (taskQueueStatus.isReadyToReconnect() && !emuManager.isRunning(profile.getEmulatorNumber())) {
                 logInfo("Emulator is not running, acquiring emulator slot now");
                 acquireEmulatorSlot();
+            }
+
+            if (forceIdleIfMaxActiveTimeExceeded()) {
+                continue;
             }
 
             // --- SCHEDULING LOGIC ---
@@ -585,7 +591,7 @@ public class TaskQueue {
     }
 
     // Idle time management methods
-    private void idlingEmulator(LocalDateTime delayUntil) {
+    private void idlingEmulator(LocalDateTime delayUntil, boolean forceReleaseSlot) {
         IdleBehavior behavior = IdleBehavior.fromString(Optional.ofNullable(ServConfig.getServices().getGlobalConfig())
                 .map(cfg -> cfg.getOrDefault(EnumConfigurationKey.IDLE_BEHAVIOR_STRING.name(),
                         EnumConfigurationKey.IDLE_BEHAVIOR_STRING.getDefaultValue()))
@@ -595,8 +601,14 @@ public class TaskQueue {
             // Send game to background (home screen), keep emulator and game running
             emuManager.sendGameToBackground(profile.getEmulatorNumber());
             logInfo("Sending game to background due to large inactivity. Next task: " + delayUntil);
+            if (forceReleaseSlot) {
+                emuManager.releaseEmulatorSlot(profile);
+                activeSessionStartedAt = null;
+                logInfo("Released queue slot after forcing idle due to profile active time limit.");
+            }
         } else if (behavior == IdleBehavior.PC_SLEEP) {
             logInfo("PC Sleep is enabled for idle behavior. Suspending PC...");
+            activeSessionStartedAt = null;
             schedulePcWakeUpAndSleep(delayUntil);
             return;
         } else {
@@ -604,6 +616,7 @@ public class TaskQueue {
             emuManager.closeEmulator(profile.getEmulatorNumber());
             logInfo("Closing emulator due to large inactivity. Next task: " + delayUntil);
             emuManager.releaseEmulatorSlot(profile);
+            activeSessionStartedAt = null;
         }
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -632,6 +645,7 @@ public class TaskQueue {
         try {
             emuManager.adquireEmulatorSlot(profile,
                     (thread, position) -> updateProfileStatus("Waiting for slot, position: " + position));
+            activeSessionStartedAt = LocalDateTime.now();
         } catch (InterruptedException e) {
             logError("Interrupted while acquiring emulator slot: " + e.getMessage());
             Thread.currentThread().interrupt();
@@ -714,7 +728,7 @@ public class TaskQueue {
                 return;
             }
 
-            idlingEmulator(taskQueueStatus.getDelayUntil());
+            idlingEmulator(taskQueueStatus.getDelayUntil(), false);
             taskQueueStatus.setIdleTimeExceeded(true);
             return;
         }
@@ -800,6 +814,7 @@ public class TaskQueue {
      */
     public void stop() {
         taskQueueStatus.setRunning(false); // Stop the main loop
+        activeSessionStartedAt = null;
 
         if (schedulerThread != null) {
             schedulerThread.interrupt(); // Interrupt the thread to force an immediate exit
@@ -885,6 +900,42 @@ public class TaskQueue {
 
     public DTOProfiles getProfile() {
         return profile;
+    }
+
+    private boolean forceIdleIfMaxActiveTimeExceeded() {
+        if (currentExecutionContext != null || activeSessionStartedAt == null) {
+            return false;
+        }
+
+        HashMap<String, String> globalConfig = ServConfig.getServices().getGlobalConfig();
+        boolean enabledGlobally = Boolean.parseBoolean(Optional.ofNullable(globalConfig)
+                .map(cfg -> cfg.get(EnumConfigurationKey.PROFILE_MAX_ACTIVE_TIME_ENABLED_BOOL.name()))
+                .orElse(EnumConfigurationKey.PROFILE_MAX_ACTIVE_TIME_ENABLED_BOOL.getDefaultValue()));
+        if (!enabledGlobally) {
+            return false;
+        }
+
+        long enabledProfiles = ServProfiles.getServices().getProfiles().stream()
+                .filter(p -> Boolean.TRUE.equals(p.getEnabled()))
+                .count();
+        if (enabledProfiles <= 1) {
+            return false;
+        }
+
+        int maxActiveMinutes = Math.max(1, Optional.ofNullable(globalConfig)
+            .map(cfg -> cfg.get(EnumConfigurationKey.PROFILE_MAX_ACTIVE_TIME_MINUTES_INT.name()))
+            .map(Integer::parseInt)
+            .orElse(Integer.parseInt(EnumConfigurationKey.PROFILE_MAX_ACTIVE_TIME_MINUTES_INT.getDefaultValue())));
+        LocalDateTime forcedIdleAt = activeSessionStartedAt.plusMinutes(maxActiveMinutes);
+        if (LocalDateTime.now().isBefore(forcedIdleAt)) {
+            return false;
+        }
+
+        logInfo("Profile max active time reached (" + maxActiveMinutes
+                + " min). Forcing idle to release execution for other profiles.");
+        idlingEmulator(taskQueueStatus.getDelayUntil(), true);
+        taskQueueStatus.setIdleTimeExceeded(true);
+        return true;
     }
 
 	private void schedulePcWakeUpAndSleep(LocalDateTime wakeUpTime) {

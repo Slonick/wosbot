@@ -18,6 +18,7 @@ public enum EnumConfigurationKey {
 	BOOL_DEBUG("false", Boolean.class),
 	GAME_VERSION_STRING("GLOBAL", String.class),
 	MAX_RUNNING_EMULATORS_INT("1", Integer.class),
+	PROFILE_SWITCH_COOLDOWN_MS_INT("10000", Integer.class),
 	MAX_IDLE_TIME_INT("15", Integer.class),
 	IDLE_BEHAVIOR_STRING("CLOSE_EMULATOR", String.class),
 	MUMU_PATH_STRING("C:\\Program Files\\Netease\\MuMuPlayer\\nx_main", String.class),
@@ -299,6 +300,8 @@ public enum EnumConfigurationKey {
     CREATE_CHARACTER_SKIP_TUTORIAL_BOOL("false", Boolean.class),
     TEST_HOOK_LOOP_ENABLED_BOOL("false", Boolean.class),
     KEEP_EMULATOR_OPEN_BOOL("false", Boolean.class),
+	PROFILE_MAX_ACTIVE_TIME_ENABLED_BOOL("false", Boolean.class),
+	PROFILE_MAX_ACTIVE_TIME_MINUTES_INT("60", Integer.class),
 
     // ========================================================================
     // STATISTICS FOR UI
