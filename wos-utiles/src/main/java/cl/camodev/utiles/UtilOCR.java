@@ -5,10 +5,12 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.List;
 
 import javax.imageio.ImageIO;
 
@@ -17,7 +19,6 @@ import cl.camodev.wosbot.ot.DTOPoint;
 import cl.camodev.wosbot.ot.DTOTesseractSettings;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
-import net.sourceforge.tess4j.util.LoadLibs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -570,16 +571,27 @@ public class UtilOCR {
             return tessdataPath;
         }
 
-        File projectTessdata = new File("lib/tesseract");
-        if (isValidTessdataDir(projectTessdata)) {
-            tessdataPath = projectTessdata.getAbsolutePath();
-            return tessdataPath;
+        for (Path candidate : tessdataCandidates()) {
+            File dir = candidate.toFile();
+            if (isValidTessdataDir(dir)) {
+                tessdataPath = dir.getAbsolutePath();
+                log.info("Using project tessdata: {}", tessdataPath);
+                return tessdataPath;
+            }
         }
 
-        File extracted = LoadLibs.extractTessResources("tessdata");
-        tessdataPath = extracted.getAbsolutePath();
-        log.info("Using tessdata extracted from Maven dependency: {}", tessdataPath);
-        return tessdataPath;
+        throw new IllegalStateException("Project tessdata not found. Expected real traineddata files under lib/tesseract.");
+    }
+
+    private static List<Path> tessdataCandidates() {
+        List<Path> candidates = new ArrayList<>();
+        Path cwd = Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize();
+
+        for (Path current = cwd; current != null; current = current.getParent()) {
+            candidates.add(current.resolve("lib").resolve("tesseract"));
+        }
+
+        return candidates;
     }
 
     private static boolean isValidTessdataDir(File dir) {
