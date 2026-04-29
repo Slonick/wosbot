@@ -220,23 +220,18 @@
 </div>
 
 <details>
-<summary><b>💡 Windows Users: Adding Java & Maven to PATH</b></summary>
+<summary><b>🍎 macOS Users: Native Dependencies</b></summary>
 <br/>
 
-1. Press <kbd>Win</kbd> + <kbd>R</kbd>, type `sysdm.cpl`, and press <kbd>Enter</kbd>
-2. Go to **Advanced** → **Environment Variables**
-3. Under **System variables**, select `Path` and click **Edit**
-4. Add the `bin` directories of your Java and Maven installations:
-   ```
-   C:\Program Files\Eclipse Adoptium\jdk-17\bin
-   C:\apache-maven-3.9.9\bin
-   ```
-5. Click **OK** and restart your terminal
-6. Verify with:
-   ```sh
-   java -version
-   mvn -version
-   ```
+This repository now targets `macOS + MuMuPlayer Pro` only.
+
+The project resolves `adb` and `ffmpeg` on macOS automatically, but a few native dependencies still need to come from your local machine:
+
+```sh
+brew install android-platform-tools ffmpeg opencv
+```
+
+MuMu support expects the official `mumutool` CLI and ADB flow bundled with `MuMuPlayer Pro`.
 
 </details>
 
@@ -283,45 +278,22 @@ java -jar wos-bot-1.7.1.jar
   <i>The bot interfaces with your Android emulator via ADB. Officially supported:</i>
   <br/><br/>
 
-  <a href="#-emulator-configuration"><img src="https://img.shields.io/badge/MuMu_Player-✅_Supported-4CAF50?style=for-the-badge&labelColor=1b3a5c" alt="MuMu" /></a>
-  &nbsp;
-  <a href="#-emulator-configuration"><img src="https://img.shields.io/badge/MEmu-✅_Supported-4CAF50?style=for-the-badge&labelColor=1b3a5c" alt="MEmu" /></a>
-  &nbsp;
-  <a href="#-emulator-configuration"><img src="https://img.shields.io/badge/LDPlayer_9-✅_Supported-4CAF50?style=for-the-badge&labelColor=1b3a5c" alt="LDPlayer" /></a>
+  <a href="#-emulator-configuration"><img src="https://img.shields.io/badge/MuMu_Player_Pro-✅_Supported-4CAF50?style=for-the-badge&labelColor=1b3a5c" alt="MuMu" /></a>
 </div>
 
 <br/>
 
 ### Emulator Executable Paths
 
-When prompted by the bot launcher, select the **command-line controller** (not the graphical app):
+When prompted by the bot launcher, select either the app bundle or the bundled command-line controller:
 
 <details>
 <summary><b>📂 MuMu Player</b></summary>
 
 ```
-C:\Program Files\Netease\MuMuPlayerGlobal-12.0\shell\MuMuManager.exe
-C:\Program Files\Netease\MuMuPlayer\nx_main\MuMuManager.exe
+/Applications/MuMuPlayer Pro.app
+/Applications/MuMuPlayer Pro.app/Contents/MacOS/mumutool
 ```
-</details>
-
-<details>
-<summary><b>📂 MEmu</b></summary>
-
-```
-C:\Program Files\Microvirt\MEmu\memuc.exe
-```
-</details>
-
-<details>
-<summary><b>📂 LDPlayer 9</b></summary>
-
-```
-C:\LDPlayer\LDPlayer9\ldconsole.exe
-```
-
-> [!WARNING]
-> You must manually enable ADB: `Settings → Other settings → ADB debugging → Enable local connection`
 </details>
 
 <br/>

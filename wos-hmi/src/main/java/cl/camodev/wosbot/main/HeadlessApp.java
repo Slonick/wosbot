@@ -7,9 +7,8 @@ import java.util.HashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import cl.camodev.utiles.ImageSearchUtil;
+import cl.camodev.utiles.PlatformPaths;
 import cl.camodev.wosbot.console.enumerable.EnumConfigurationKey;
-import cl.camodev.wosbot.emulator.EmulatorType;
 import cl.camodev.wosbot.serv.impl.ServConfig;
 import cl.camodev.wosbot.serv.impl.ServScheduler;
 import cl.camodev.wosbot.serv.impl.TelegramBotService;
@@ -23,7 +22,7 @@ public class HeadlessApp {
 
 		// 1. Initialize external libraries
 		try {
-			ImageSearchUtil.loadNativeLibrary("/native/opencv/opencv_java4110.dll");
+			PlatformPaths.loadOpenCvNativeLibrary();
 			logger.info("OpenCV native library loaded successfully.");
 		} catch (IOException e) {
 			logger.error("Failed to load OpenCV: ", e);
@@ -81,27 +80,8 @@ public class HeadlessApp {
 			globalConfig = new HashMap<>();
 		}
 
-		String savedActiveEmulator = globalConfig.get(EnumConfigurationKey.CURRENT_EMULATOR_STRING.name());
-		EmulatorType activeEmulator = null;
-		if (savedActiveEmulator != null && !savedActiveEmulator.isEmpty()) {
-			try {
-				activeEmulator = EmulatorType.valueOf(savedActiveEmulator);
-			} catch (IllegalArgumentException e) {
-				// Ignore Invalid Enum constant
-			}
-		}
-		boolean activeEmulatorValid = false;
-
-		if (activeEmulator != null) {
-			String activePath = globalConfig.get(activeEmulator.getConfigKey());
-			if (activePath != null && new File(activePath).exists()) {
-				activeEmulatorValid = true;
-			} else {
-				ServScheduler.getServices().saveEmulatorPath(activeEmulator.getConfigKey(), null);
-			}
-		}
-
-		if (!activeEmulatorValid) {
+		String activePath = globalConfig.get(EnumConfigurationKey.MUMU_PATH_STRING.name());
+		if (activePath == null || !new File(activePath).exists()) {
 			logger.warn("No valid active emulator configured. Automation might fail unless changed.");
 		}
 	}

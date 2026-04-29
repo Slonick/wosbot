@@ -4,7 +4,10 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.android.ddmlib.IDevice;
 import com.android.ddmlib.NullOutputReceiver;
@@ -15,6 +18,15 @@ import org.slf4j.LoggerFactory;
 
 public class MuMuEmulator extends Emulator {
 	private static final Logger logger = LoggerFactory.getLogger(MuMuEmulator.class);
+	private static final int COMMAND_TIMEOUT_SECONDS = 15;
+	private static final long BACKEND_READY_CACHE_MS = 30_000L;
+	private static final Pattern JSON_NUMBER_FIELD = Pattern.compile(
+			"(?i)[\"']?(customAdbPort|adbPort|adb_port|port|adbPortNumber)[\"']?\\s*[:=]\\s*[\"']?(\\d{4,5})");
+	private static final Pattern JSON_STRING_FIELD = Pattern.compile(
+			"(?i)[\"']?(adbHost|host|ip|ipAddress)[\"']?\\s*[:=]\\s*[\"']([^\"'\\s,}]+)");
+	private static final Pattern RUNNING_STATE_PATTERN = Pattern.compile(
+			"(?i)[\"']?(state|status|playerState|vmState)[\"']?\\s*[:=]\\s*[\"']?([^\"'\\s,}]+)");
+	private volatile long lastBackendReadyAtMs;
 
 	public MuMuEmulator(String consolePath) {
 		super(consolePath);
@@ -22,73 +34,26 @@ public class MuMuEmulator extends Emulator {
 
 	@Override
 	protected String getDeviceSerial(String emulatorNumber) {
-		String[] command = { consolePath + File.separator + "MuMuManager.exe", "adb", "-v", emulatorNumber, "connect" };
-		try {
-			ProcessBuilder pb = new ProcessBuilder(command);
-			pb.directory(new File(consolePath).getParentFile());
-			Process process = pb.start();
-			BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-			String line;
-			String host = "127.0.0.1";
-			String port = "";
-			
-			while ((line = reader.readLine()) != null) {
-				if (line.contains("\"adb_host\"")) {
-					host = line.split(":")[1].replaceAll("[\" ,]", "").trim();
-				} else if (line.contains("\"adb_port\"")) {
-					port = line.split(":")[1].replaceAll("[, ]", "").trim();
-				}
-			}
-			process.waitFor(TimeUnit.SECONDS.toMillis(5), TimeUnit.MILLISECONDS);
-			
-			if (!port.isEmpty()) {
-				return host + ":" + port;
-			}
-		} catch (Exception e) {
-			logger.error("Error getting MuMu adb port from manager, falling back to default.", e);
-		}
-
-		// Fallback for older MuMu versions
-		int fallbackPort = 16384 + (Integer.parseInt(emulatorNumber) * 32);
-		return "127.0.0.1:" + fallbackPort;
+		return getMacDeviceSerial(emulatorNumber);
 	}
 
 	@Override
 	public void launchEmulator(String emulatorNumber) {
-		String[] command = { consolePath + File.separator + "MuMuManager.exe", "api", "-v", emulatorNumber, "launch_player" };
-		executeCommand(command);
+		ensureMuMuAppRunning();
+		waitForMuMuToolBackend();
+		executeCommand(new String[] { getMuMuExecutablePath(), "open", emulatorNumber });
         logger.info("MuMu launched at index {}", emulatorNumber);
 	}
 
 	@Override
 	public void closeEmulator(String emulatorNumber) {
-		String[] command = { consolePath + File.separator + "MuMuManager.exe", "api", "-v", emulatorNumber, "shutdown_player" };
-		executeCommand(command);
+		executeCommand(new String[] { getMuMuExecutablePath(), "close", emulatorNumber });
         logger.info("MuMu closed at index {}", emulatorNumber);
 	}
 
 	@Override
 	public boolean isRunning(String emulatorNumber) {
-		try {
-			String[] command = { consolePath + File.separator + "MuMuManager.exe", "api", "-v", emulatorNumber, "player_state" };
-			ProcessBuilder pb = new ProcessBuilder(command);
-			pb.directory(new File(consolePath).getParentFile());
-
-			Process process = pb.start();
-			BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-			String line;
-
-			while ((line = reader.readLine()) != null) {
-				if (line.contains("state=start_finished")) {
-					return true;
-				}
-			}
-
-			process.waitFor();
-		} catch (IOException | InterruptedException e) {
-			logger.error("Error checking if emulator is running", e);
-		}
-		return false;
+		return isRunningOnMac(emulatorNumber);
 	}
 
 	@Override
@@ -96,7 +61,6 @@ public class MuMuEmulator extends Emulator {
 		logger.info("Verifying and applying settings for MuMu index {}", emulatorNumber);
 		boolean wasRunning = isRunning(emulatorNumber);
 
-		// Apply static config file injections via MuMuManager setting command
 		if (wasRunning) {
 			logger.info("Stopping MuMu index {} to apply core settings...", emulatorNumber);
 			closeEmulator(emulatorNumber);
@@ -111,34 +75,26 @@ public class MuMuEmulator extends Emulator {
 			}
 		}
 
-		logger.info("Setting Native Resolution (720x1280) and DPI (320) via MuMuManager for MuMu index {}", emulatorNumber);
-		// Resolution mode "custom" allows overriding with specific resolution settings
-		String[] customModifyMode = { consolePath + File.separator + "MuMuManager.exe", "setting", "--vmindex", emulatorNumber, "--key", "resolution_mode", "--value", "custom" };
-		executeCommand(customModifyMode);
+		String settings = "{\"resolutionWidthHeight\":\"720x1280\","
+				+ "\"resolutionDPI\":320,"
+				+ "\"usingNormalADBPort\":true,"
+				+ "\"customAdbPort\":" + getMacAdbPort(emulatorNumber) + "}";
+		executeCommand(new String[] { getMuMuExecutablePath(), "config", emulatorNumber, "--setting", settings });
 
-		String[] customModifyConfig = { 
-			consolePath + File.separator + "MuMuManager.exe", "setting", "--vmindex", emulatorNumber, 
-			"--key", "resolution_width.custom", "--value", "720",
-			"--key", "resolution_height.custom", "--value", "1280",
-			"--key", "resolution_dpi.custom", "--value", "320" 
-		};
-		executeCommand(customModifyConfig);
-		
-		// Set ADB language injection
 		logger.info("Starting MuMu index {} to apply language settings via ADB...", emulatorNumber);
 		launchEmulator(emulatorNumber);
 
 		try {
-			// Give MuMu time to boot
-			Thread.sleep(15000); 
+			Thread.sleep(15000);
 
 			IDevice device = findDevice(emulatorNumber);
 			if (device != null) {
 				logger.info("Setting locale to en-US for MuMu index {}", emulatorNumber);
-				device.executeShellCommand("setprop persist.sys.locale en-US; stop; sleep 2; start", new NullOutputReceiver(), 10000, TimeUnit.MILLISECONDS);
-				
+				device.executeShellCommand("setprop persist.sys.locale en-US; stop; sleep 2; start",
+						new NullOutputReceiver(), 10000, TimeUnit.MILLISECONDS);
+
 				logger.info("Settings applied successfully for MuMu index {}", emulatorNumber);
-				Thread.sleep(10000); // Give android time to restart UI
+				Thread.sleep(10000);
 			} else {
 				logger.warn("Could not connect to device via ADB to set Language on MuMu index {}", emulatorNumber);
 			}
@@ -149,17 +105,187 @@ public class MuMuEmulator extends Emulator {
 		return true;
 	}
 
+	private String getMacDeviceSerial(String emulatorNumber) {
+		waitForMuMuToolBackend();
+		String output = runCommandForOutput(new String[] { getMuMuExecutablePath(), "info", emulatorNumber });
+		String host = extractStringField(output, "127.0.0.1");
+		Integer port = extractPort(output);
+		if (port == null) {
+			port = getMacAdbPort(emulatorNumber);
+			logger.warn("Could not parse MuMu macOS ADB port for device {}. Falling back to configured port {}.",
+					emulatorNumber, port);
+		}
+		return host + ":" + port;
+	}
+
+	private boolean isRunningOnMac(String emulatorNumber) {
+		waitForMuMuToolBackend();
+		String output = runCommandForOutput(new String[] { getMuMuExecutablePath(), "info", emulatorNumber });
+		if (output.isBlank()) {
+			return false;
+		}
+
+		Matcher stateMatcher = RUNNING_STATE_PATTERN.matcher(output);
+		while (stateMatcher.find()) {
+			String state = stateMatcher.group(2).toLowerCase();
+			if (state.contains("run") || state.contains("boot") || state.contains("open") || state.contains("online")) {
+				return true;
+			}
+			if (state.contains("close") || state.contains("stop") || state.contains("shutdown") || state.contains("offline")) {
+				return false;
+			}
+		}
+
+		String normalized = output.toLowerCase();
+		if (normalized.contains("running") || normalized.contains("opened") || normalized.contains("online")) {
+			return true;
+		}
+		if (normalized.contains("closed") || normalized.contains("stopped") || normalized.contains("shutdown")) {
+			return false;
+		}
+
+		return false;
+	}
+
+	private int getMacAdbPort(String emulatorNumber) {
+		return 16384 + (Integer.parseInt(emulatorNumber) * 32);
+	}
+
+	private Integer extractPort(String output) {
+		if (output == null) {
+			return null;
+		}
+
+		Matcher matcher = JSON_NUMBER_FIELD.matcher(output);
+		while (matcher.find()) {
+			String fieldName = matcher.group(1).toLowerCase();
+			int port = Integer.parseInt(matcher.group(2));
+			if (fieldName.contains("adb")) {
+				return port;
+			}
+		}
+
+		matcher.reset();
+		if (matcher.find()) {
+			return Integer.parseInt(matcher.group(2));
+		}
+		return null;
+	}
+
+	private String extractStringField(String output, String fallback) {
+		if (output == null) {
+			return fallback;
+		}
+
+		Matcher matcher = JSON_STRING_FIELD.matcher(output);
+		return matcher.find() ? matcher.group(2) : fallback;
+	}
+
+	private String runCommandForOutput(String[] command) {
+		try {
+			ProcessBuilder pb = createProcessBuilder(command);
+			Process process = pb.start();
+			String output;
+			try (BufferedReader reader = new BufferedReader(
+					new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
+				 BufferedReader errorReader = new BufferedReader(
+						 new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
+				StringBuilder buffer = new StringBuilder();
+				String line;
+				while ((line = reader.readLine()) != null) {
+					buffer.append(line).append('\n');
+				}
+				while ((line = errorReader.readLine()) != null) {
+					buffer.append(line).append('\n');
+				}
+				output = buffer.toString();
+			}
+
+			boolean finished = process.waitFor(COMMAND_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+			if (!finished) {
+				process.destroyForcibly();
+				logger.warn("MuMu command timed out: {}", String.join(" ", command));
+				return "";
+			}
+			return output;
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			logger.warn("MuMu command interrupted: {}", String.join(" ", command));
+		} catch (IOException e) {
+			logger.error("Error executing MuMu command: {}", String.join(" ", command), e);
+		}
+		return "";
+	}
+
 	private void executeCommand(String[] command) {
 		try {
-			ProcessBuilder pb = new ProcessBuilder(command);
-			pb.directory(new File(consolePath).getParentFile());
+			ProcessBuilder pb = createProcessBuilder(command);
 			Process process = pb.start();
-			process.waitFor();
+			boolean finished = process.waitFor(COMMAND_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+			if (!finished) {
+				process.destroyForcibly();
+				logger.warn("MuMu command timed out and was killed: {}", String.join(" ", command));
+			}
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
 			logger.error("Command execution interrupted", e);
 		} catch (IOException e) {
 			logger.error("Error executing command", e);
 		}
+	}
+
+	private ProcessBuilder createProcessBuilder(String[] command) {
+		ProcessBuilder pb = new ProcessBuilder(command);
+		File workingDirectory = new File(consolePath);
+		pb.directory(workingDirectory.isDirectory() ? workingDirectory : workingDirectory.getParentFile());
+		return pb;
+	}
+
+	private void ensureMuMuAppRunning() {
+		String appBundlePath = "/Applications/MuMuPlayer Pro.app";
+		try {
+			Process process = new ProcessBuilder("open", "-g", appBundlePath).start();
+			process.waitFor(10, TimeUnit.SECONDS);
+		} catch (Exception e) {
+			logger.warn("Could not start MuMuPlayer Pro app bundle via open: {}", e.getMessage());
+			try {
+				Process process = new ProcessBuilder("/Applications/MuMuPlayer Pro.app/Contents/MacOS/MuMuPlayer Pro")
+						.start();
+				process.waitFor(10, TimeUnit.SECONDS);
+			} catch (Exception inner) {
+				logger.warn("Could not start MuMuPlayer Pro binary directly: {}", inner.getMessage());
+			}
+		}
+	}
+
+	private void waitForMuMuToolBackend() {
+		long now = System.currentTimeMillis();
+		if (lastBackendReadyAtMs > 0 && (now - lastBackendReadyAtMs) < BACKEND_READY_CACHE_MS) {
+			return;
+		}
+
+		ensureMuMuAppRunning();
+
+		for (int i = 0; i < 10; i++) {
+			String output = runCommandForOutput(new String[] { getMuMuExecutablePath(), "port" }).trim();
+			if (!output.isBlank() && !output.toLowerCase().contains("invalidport")) {
+				lastBackendReadyAtMs = System.currentTimeMillis();
+				logger.info("MuMu backend is ready. Server port response: {}", output);
+				return;
+			}
+
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				return;
+			}
+		}
+
+		logger.warn("MuMu backend did not become ready in time; mumutool still reports invalid port.");
+	}
+
+	private String getMuMuExecutablePath() {
+		return consolePath + File.separator + "mumutool";
 	}
 }

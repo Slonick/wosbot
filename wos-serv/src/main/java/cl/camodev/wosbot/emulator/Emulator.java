@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.concurrent.ConcurrentHashMap;
 
+import cl.camodev.utiles.PlatformPaths;
 import cl.camodev.utiles.UtilOCR;
 import cl.camodev.wosbot.console.enumerable.GameVersion;
 import cl.camodev.wosbot.ex.ADBConnectionException;
@@ -66,24 +67,9 @@ public abstract class Emulator {
 	 * @return Path to the ADB executable
 	 */
 	private String getProjectAdbPath() {
-		// Get the current working directory (where the application is running)
-		String currentDir = System.getProperty("user.dir");
-
-		// Check if we're in the wos-hmi directory or the root project directory
-		File adbFile = new File(currentDir, "lib" + File.separator + "adb" + File.separator + "adb.exe");
-		if (adbFile.exists()) {
-			return adbFile.getAbsolutePath();
-		}
-
-		// Try the wos-hmi subdirectory if we're in the root
-		adbFile = new File(currentDir, "wos-hmi" + File.separator + "adb" + File.separator + "adb.exe");
-		if (adbFile.exists()) {
-			return adbFile.getAbsolutePath();
-		}
-
-		// Fallback to the original console path if project ADB not found
-		logger.warn("Project ADB not found, falling back to console path: {}", consolePath);
-		return consolePath + File.separator + "adb.exe";
+		String adbPath = PlatformPaths.resolveBundledAdbPath(consolePath);
+		logger.info("Resolved ADB path: {}", adbPath);
+		return adbPath;
 	}
 
 	/**
@@ -1105,7 +1091,7 @@ public abstract class Emulator {
 
 	/**
 	 * Checks if the emulator is running with caching to avoid repeated external process calls.
-	 * This wrapper method provides significant performance improvement for MEmu emulator.
+	 * This wrapper method provides significant performance improvement for direct ADB screenshot capture.
 	 * @param emulatorNumber Emulator identifier
 	 * @return true if running, false otherwise
 	 */
@@ -1181,7 +1167,7 @@ public abstract class Emulator {
 			String port = serial.substring("emulator-".length());
 			return "127.0.0.1:" + port;
 		} else if (serial.contains(":")) {
-			// Already in IP:port format (used by MEmu)
+			// Already in IP:port format
 			return serial;
 		}
 		// If it doesn't match any known format, return as is

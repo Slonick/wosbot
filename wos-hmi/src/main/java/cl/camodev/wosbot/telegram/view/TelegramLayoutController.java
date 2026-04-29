@@ -9,6 +9,7 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Properties;
 
+import cl.camodev.utiles.PlatformPaths;
 import cl.camodev.wosbot.console.enumerable.EnumConfigurationKey;
 import cl.camodev.wosbot.serv.impl.ServConfig;
 import cl.camodev.wosbot.serv.impl.TelegramBotService;
@@ -104,7 +105,12 @@ public class TelegramLayoutController {
 
         // Sync toggle state to current registration status
         if (checkBoxAutoStart != null) {
-            checkBoxAutoStart.setSelected(Files.exists(startupFolder().resolve(SHORTCUT_NAME)));
+            checkBoxAutoStart.setDisable(!PlatformPaths.isWindows());
+            if (PlatformPaths.isWindows()) {
+                checkBoxAutoStart.setSelected(Files.exists(startupFolder().resolve(SHORTCUT_NAME)));
+            } else {
+                checkBoxAutoStart.setSelected(false);
+            }
         }
     }
 
@@ -271,6 +277,11 @@ public class TelegramLayoutController {
 
     @FXML
     private void handleAutoStartToggle() {
+        if (!PlatformPaths.isWindows()) {
+            checkBoxAutoStart.setSelected(false);
+            refreshStartupLabel();
+            return;
+        }
         if (checkBoxAutoStart.isSelected()) {
             registerStartup();
         } else {
@@ -279,6 +290,10 @@ public class TelegramLayoutController {
     }
 
     private void registerStartup() {
+        if (!PlatformPaths.isWindows()) {
+            refreshStartupLabel();
+            return;
+        }
         File batFile = resolveBatFile();
         if (batFile == null) {
             showError("Cannot locate start-watcher.bat.\nMake sure it is in the same folder as the bot JAR.");
@@ -316,6 +331,10 @@ public class TelegramLayoutController {
     }
 
     private void removeStartup() {
+        if (!PlatformPaths.isWindows()) {
+            refreshStartupLabel();
+            return;
+        }
         Path shortcut = startupFolder().resolve(SHORTCUT_NAME);
         try {
             Files.deleteIfExists(shortcut);
@@ -327,6 +346,18 @@ public class TelegramLayoutController {
     }
 
     private void refreshStartupLabel() {
+        if (!PlatformPaths.isWindows()) {
+            if (checkBoxAutoStart != null) {
+                checkBoxAutoStart.setSelected(false);
+                checkBoxAutoStart.setDisable(true);
+            }
+            if (labelStartupStatus != null) {
+                labelStartupStatus.setText("Auto-start: unsupported on macOS");
+                labelStartupStatus.setStyle("-fx-text-fill: #9e9e9e;");
+            }
+            return;
+        }
+
         boolean registered = Files.exists(startupFolder().resolve(SHORTCUT_NAME));
         if (checkBoxAutoStart != null) checkBoxAutoStart.setSelected(registered);
         if (labelStartupStatus == null) return;
@@ -340,6 +371,9 @@ public class TelegramLayoutController {
     }
 
     private static Path startupFolder() {
+        if (!PlatformPaths.isWindows()) {
+            return Paths.get(System.getProperty("user.home"), ".wosbot");
+        }
         return Paths.get(System.getenv("APPDATA"),
                 "Microsoft", "Windows", "Start Menu", "Programs", "Startup");
     }

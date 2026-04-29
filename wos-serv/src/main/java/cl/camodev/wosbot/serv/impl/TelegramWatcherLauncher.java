@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Properties;
 
+import cl.camodev.utiles.PlatformPaths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,6 +16,15 @@ public class TelegramWatcherLauncher {
     private static final Logger logger = LoggerFactory.getLogger(TelegramWatcherLauncher.class);
 
     public static void startWatcherIfNotRunning() {
+        if (!PlatformPaths.isMac()) {
+            logger.info("Telegram watcher launcher is disabled outside macOS runtime.");
+            return;
+        }
+
+        logger.info("Telegram watcher auto-launch is disabled on macOS.");
+    }
+
+    private static void startWatcherIfNotRunningWindowsLegacy() {
         if (isWatcherRunning()) {
             logger.info("Telegram Watcher is already running.");
             return;

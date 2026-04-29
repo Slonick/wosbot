@@ -3,6 +3,7 @@ package cl.camodev.utiles;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,12 +17,18 @@ import cl.camodev.wosbot.ot.DTOPoint;
 import cl.camodev.wosbot.ot.DTOTesseractSettings;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
+import net.sourceforge.tess4j.util.LoadLibs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class UtilOCR {
 
     private static final Logger log = LoggerFactory.getLogger(UtilOCR.class);
+    private static volatile String tessdataPath;
+
+    static {
+        PlatformPaths.configureTesseractNativePath();
+    }
 
     /**
      * Performs OCR on a specified region of a DTORawImage using Tesseract.
@@ -54,7 +61,7 @@ public class UtilOCR {
 
         Tesseract tesseract = new Tesseract();
         tesseract.setConfigs(Collections.singletonList("quiet"));
-        tesseract.setDatapath("lib/tesseract");
+        tesseract.setDatapath(resolveTessdataPath());
         tesseract.setLanguage(language);
         tesseract.setPageSegMode(7); // single line
         tesseract.setOcrEngineMode(1); // LSTM only
@@ -107,7 +114,7 @@ public class UtilOCR {
         // Configure Tesseract
         long tesseractConfigStartTime = System.currentTimeMillis();
         Tesseract tesseract = new Tesseract();
-        tesseract.setDatapath("lib/tesseract");
+        tesseract.setDatapath(resolveTessdataPath());
         tesseract.setLanguage("eng");
 
         if (settings.hasPageSegMode()) {
@@ -550,12 +557,42 @@ public class UtilOCR {
 
         Tesseract tesseract = new Tesseract();
         tesseract.setConfigs(Collections.singletonList("quiet"));
-        tesseract.setDatapath("lib/tesseract");
+        tesseract.setDatapath(resolveTessdataPath());
         tesseract.setLanguage(language);
         tesseract.setPageSegMode(7);
         tesseract.setOcrEngineMode(1);
 
         return tesseract.doOCR(upscaled).replace("\n", "").replace("\r", "").trim();
+    }
+
+    private static synchronized String resolveTessdataPath() {
+        if (tessdataPath != null) {
+            return tessdataPath;
+        }
+
+        File projectTessdata = new File("lib/tesseract");
+        if (isValidTessdataDir(projectTessdata)) {
+            tessdataPath = projectTessdata.getAbsolutePath();
+            return tessdataPath;
+        }
+
+        File extracted = LoadLibs.extractTessResources("tessdata");
+        tessdataPath = extracted.getAbsolutePath();
+        log.info("Using tessdata extracted from Maven dependency: {}", tessdataPath);
+        return tessdataPath;
+    }
+
+    private static boolean isValidTessdataDir(File dir) {
+        if (dir == null || !dir.isDirectory()) {
+            return false;
+        }
+
+        return isRealTrainedData(new File(dir, "eng.traineddata"))
+                && isRealTrainedData(new File(dir, "osd.traineddata"));
+    }
+
+    private static boolean isRealTrainedData(File file) {
+        return file.isFile() && file.length() > 1024;
     }
 
 }

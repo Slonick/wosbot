@@ -21,8 +21,6 @@ import cl.camodev.utiles.UtilOCR;
 import cl.camodev.wosbot.console.enumerable.EnumConfigurationKey;
 import cl.camodev.wosbot.console.enumerable.EnumTemplates;
 import cl.camodev.wosbot.console.enumerable.GameVersion;
-import cl.camodev.wosbot.emulator.impl.LDPlayerEmulator;
-import cl.camodev.wosbot.emulator.impl.MEmuEmulator;
 import cl.camodev.wosbot.emulator.impl.MuMuEmulator;
 import cl.camodev.wosbot.ot.*;
 import cl.camodev.wosbot.serv.impl.ServConfig;
@@ -80,10 +78,9 @@ public class EmulatorManager {
             GAME = GameVersion.GLOBAL;
         }
 
-        String savedActiveEmulator = globalConfig.get(EnumConfigurationKey.CURRENT_EMULATOR_STRING.name());
-        if (savedActiveEmulator == null || savedActiveEmulator.trim().isEmpty()) {
-            throw new IllegalStateException("No active emulator set. Ensure an emulator is selected.");
-        }
+        String savedActiveEmulator = globalConfig.getOrDefault(
+                EnumConfigurationKey.CURRENT_EMULATOR_STRING.name(),
+                EmulatorType.MUMU.name());
         MAX_RUNNING_EMULATORS = Optional
                 .ofNullable(globalConfig.get(EnumConfigurationKey.MAX_RUNNING_EMULATORS_INT.name()))
                 .map(Integer::parseInt)
@@ -97,19 +94,7 @@ public class EmulatorManager {
                         "No path found for the selected emulator: " + emulatorType.getDisplayName());
             }
 
-            switch (emulatorType) {
-                case MUMU:
-                    this.emulator = new MuMuEmulator(consolePath);
-                    break;
-                case MEMU:
-                    this.emulator = new MEmuEmulator(consolePath);
-                    break;
-                case LDPLAYER:
-                    this.emulator = new LDPlayerEmulator(consolePath);
-                    break;
-                default:
-                    throw new IllegalArgumentException("Unsupported emulator type: " + emulatorType);
-            }
+            this.emulator = new MuMuEmulator(consolePath);
 
             logger.info("Emulator initialized: {}", emulatorType.getDisplayName());
             // restartAdbServer();

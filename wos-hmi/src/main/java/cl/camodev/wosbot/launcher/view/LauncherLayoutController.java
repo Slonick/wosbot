@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
-import cl.camodev.utiles.ImageSearchUtil;
+import cl.camodev.utiles.PlatformPaths;
 import cl.camodev.wosbot.alliance.view.AllianceLayoutController;
 import cl.camodev.wosbot.common.view.AbstractProfileController;
 import cl.camodev.wosbot.alliancechampionship.view.AllianceChampionshipLayoutController;
@@ -314,101 +314,44 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
             globalConfig = new HashMap<>();
         }
 
-        String savedActiveEmulator = globalConfig.get(EnumConfigurationKey.CURRENT_EMULATOR_STRING.name());
-        EmulatorType activeEmulator = null;
-        if (savedActiveEmulator != null && !savedActiveEmulator.isEmpty()) {
-            try {
-                activeEmulator = EmulatorType.valueOf(savedActiveEmulator);
-            } catch (IllegalArgumentException e) {
-                // Ignore Invalid Enum constant
-            }
-        }
-        boolean activeEmulatorValid = false;
-
-        if (activeEmulator != null) {
-            String activePath = globalConfig.get(activeEmulator.getConfigKey());
-            if (activePath != null && new File(activePath).exists()) {
-                activeEmulatorValid = true;
-            } else {
-                ServScheduler.getServices().saveEmulatorPath(activeEmulator.getConfigKey(), null);
-            }
+        String configuredPath = globalConfig.get(EnumConfigurationKey.MUMU_PATH_STRING.name());
+        if (configuredPath != null && new File(configuredPath).exists()) {
+            ServScheduler.getServices().saveEmulatorPath(
+                    EnumConfigurationKey.CURRENT_EMULATOR_STRING.name(),
+                    EmulatorType.MUMU.name());
+            return;
         }
 
-        List<EmulatorType> foundEmulators = new ArrayList<>();
-        for (EmulatorType emulator : EmulatorType.values()) {
-            if (activeEmulator == emulator)
-                continue;
-
-            String emulatorPath = globalConfig.get(emulator.getConfigKey());
-            if (emulatorPath != null && new File(emulatorPath).exists()) {
-                foundEmulators.add(emulator);
-            } else {
-                File emulatorFile = new File(emulator.getDefaultPath());
-                if (emulatorFile.exists()) {
-                    ServScheduler.getServices().saveEmulatorPath(emulator.getConfigKey(), emulatorFile.getParent());
-                    foundEmulators.add(emulator);
-                }
-            }
+        File emulatorFile = new File(EmulatorType.MUMU.getDefaultPath());
+        if (emulatorFile.exists()) {
+            ServScheduler.getServices().saveEmulatorPath(
+                    EmulatorType.MUMU.getConfigKey(),
+                    emulatorFile.getParent());
+            ServScheduler.getServices().saveEmulatorPath(
+                    EnumConfigurationKey.CURRENT_EMULATOR_STRING.name(),
+                    EmulatorType.MUMU.name());
+            return;
         }
 
-        if (!activeEmulatorValid) {
-            if (foundEmulators.size() == 1) {
-                ServScheduler.getServices().saveEmulatorPath(EnumConfigurationKey.CURRENT_EMULATOR_STRING.name(),
-                        foundEmulators.get(0).name());
-                return;
-            } else if (foundEmulators.isEmpty()) {
-                selectEmulatorManually();
-            } else {
-                EmulatorType selectedEmulator = askUserForPreferredEmulator(foundEmulators);
-                ServScheduler.getServices().saveEmulatorPath(EnumConfigurationKey.CURRENT_EMULATOR_STRING.name(),
-                        selectedEmulator.name());
-            }
-        }
-    }
-
-    private EmulatorType askUserForPreferredEmulator(List<EmulatorType> emulators) {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Select Emulator");
-        alert.setHeaderText("Multiple emulators found. Please select which one to use.");
-
-        List<ButtonType> buttons = new ArrayList<>();
-        for (EmulatorType emulator : emulators) {
-            buttons.add(new ButtonType(emulator.getDisplayName()));
-        }
-        ButtonType cancelButton = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
-        buttons.add(cancelButton);
-
-        alert.getButtonTypes().setAll(buttons);
-        Optional<ButtonType> result = alert.showAndWait();
-
-        for (EmulatorType emulator : emulators) {
-            if (result.isPresent() && result.get().getText().equals(emulator.getDisplayName())) {
-                return emulator;
-            }
-        }
-
-        showErrorAndExit("No emulator selected. The application will close.");
-        return null;
+        selectEmulatorManually();
     }
 
     private void selectEmulatorManually() {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Select Emulator Executable");
 
-        FileChooser.ExtensionFilter exeFilter = new FileChooser.ExtensionFilter("Emulator Executable", "*.exe");
-        fileChooser.getExtensionFilters().add(exeFilter);
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Emulator Executable", "*", "*.app"));
         fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
 
         File selectedFile = fileChooser.showOpenDialog(stage);
 
         if (selectedFile != null) {
-            for (EmulatorType emulator : EmulatorType.values()) {
-                if (selectedFile.getName().equals(new File(emulator.getDefaultPath()).getName())) {
-                    ServScheduler.getServices().saveEmulatorPath(emulator.getConfigKey(), selectedFile.getParent());
-                    ServScheduler.getServices().saveEmulatorPath(EnumConfigurationKey.CURRENT_EMULATOR_STRING.name(),
-                            emulator.name());
-                    return;
-                }
+            File normalizedSelection = normalizeSelectedExecutable(EmulatorType.MUMU, selectedFile);
+            if (normalizedSelection != null) {
+                ServScheduler.getServices().saveEmulatorPath(EmulatorType.MUMU.getConfigKey(), normalizedSelection.getParent());
+                ServScheduler.getServices().saveEmulatorPath(EnumConfigurationKey.CURRENT_EMULATOR_STRING.name(),
+                        EmulatorType.MUMU.name());
+                return;
             }
             showErrorAndExit("Invalid emulator file selected. Please select a valid emulator executable.");
         } else {
@@ -423,6 +366,19 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
         alert.setContentText(message);
         alert.showAndWait();
         System.exit(0);
+    }
+
+    private File normalizeSelectedExecutable(EmulatorType emulator, File selectedFile) {
+        if (selectedFile.getName().equalsIgnoreCase(emulator.getExecutableName())) {
+            return selectedFile;
+        }
+
+        if (emulator == EmulatorType.MUMU && selectedFile.getName().equalsIgnoreCase("MuMuPlayer Pro.app")) {
+            File appBinary = new File(selectedFile, "Contents/MacOS/" + emulator.getExecutableName());
+            return appBinary.isFile() ? appBinary : null;
+        }
+
+        return null;
     }
 
     private void initializeDiscordBot() {
@@ -580,7 +536,7 @@ public class LauncherLayoutController implements IProfileLoadListener, IStaminaC
 
     private void initializeExternalLibraries() {
         try {
-            ImageSearchUtil.loadNativeLibrary("/native/opencv/opencv_java4110.dll");
+            PlatformPaths.loadOpenCvNativeLibrary();
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -102,13 +102,7 @@ public class FXApp extends Application {
 			prefs.putDouble(KEY_W, stage.getWidth());
 			prefs.putDouble(KEY_H, stage.getHeight());
 
-			// Kill adb.exe process
-			try {
-				new ProcessBuilder("taskkill", "/F", "/IM", "adb.exe").start();
-				logger.info("adb.exe process terminated.");
-			} catch (IOException e) {
-				logger.error("Failed to terminate adb.exe process: " + e.getMessage(), e);
-			}
+			logger.info("Skipping adb process termination on shutdown.");
 
 			System.exit(0);
 		});

@@ -83,10 +83,6 @@ public class ServScheduler {
 		globalsettings.forEach((key, value) -> {
 			if (key.equals(EnumConfigurationKey.MUMU_PATH_STRING.name())) {
 				saveEmulatorPath(EnumConfigurationKey.MUMU_PATH_STRING.name(), value);
-			} else if (key.equals(EnumConfigurationKey.LDPLAYER_PATH_STRING.name())) {
-				saveEmulatorPath(EnumConfigurationKey.LDPLAYER_PATH_STRING.name(), value);
-			} else if (key.equals(EnumConfigurationKey.MEMU_PATH_STRING.name())) {
-				saveEmulatorPath(EnumConfigurationKey.MEMU_PATH_STRING.name(), value);
 			}
 		});
 		List<DTOProfiles> profiles = ServProfiles.getServices().getProfiles();

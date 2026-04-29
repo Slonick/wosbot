@@ -80,10 +80,15 @@ public class EmuConfigLayoutController {
 
 		HashMap<String, String> globalConfig = ServConfig.getServices().getGlobalConfig();
 
-		String currentEmulator = globalConfig.get(EnumConfigurationKey.CURRENT_EMULATOR_STRING.name());
+		String currentEmulator = globalConfig.getOrDefault(
+				EnumConfigurationKey.CURRENT_EMULATOR_STRING.name(),
+				EmulatorType.MUMU.name());
 
 		for (EmulatorType type : EmulatorType.values()) {
-			String defaultPath = globalConfig.getOrDefault(type.getConfigKey(), type.getDefaultPath());
+			String configuredPath = globalConfig.get(type.getConfigKey());
+			String defaultPath = configuredPath != null && !configuredPath.isBlank()
+					? configuredPath
+					: type.getDefaultDirectory();
 			EmulatorAux emulator = new EmulatorAux(type, defaultPath);
 			emulator.setActive(type.name().equals(currentEmulator));
 			emulatorList.add(emulator);
@@ -140,18 +145,18 @@ public class EmuConfigLayoutController {
 					// The executableName can be used to filter or validate the file
 					File selectedFile = openFileChooser("Select" + emulator.getEmulatorType().getExecutableName());
 					if (selectedFile != null) {
-						// Verifies that the selected file matches the expected one
-						if (!selectedFile.getName().equalsIgnoreCase(emulator.getEmulatorType().getExecutableName())) {
+						File normalizedSelection = normalizeSelectedExecutable(emulator.getEmulatorType(), selectedFile);
+						if (normalizedSelection == null) {
 							showError(
 									"File not valid, please select: " + emulator.getEmulatorType().getExecutableName());
 							return;
 						}
-						emulator.setPath(selectedFile.getParent());
+						emulator.setPath(normalizedSelection.getParent());
 						tableviewEmulators.refresh();
 						// Auto-save emulator path
 						ServScheduler.getServices().saveEmulatorPath(
 								emulator.getEmulatorType().getConfigKey(),
-								selectedFile.getParent());
+								normalizedSelection.getParent());
 					}
 				});
 			}
@@ -315,8 +320,26 @@ public class EmuConfigLayoutController {
 	private File openFileChooser(String title) {
 		fileChooser.setTitle(title);
 		fileChooser.getExtensionFilters().clear();
-		fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Executable Files", "*.exe"));
+		fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Executable Files", "*", "*.app"));
 		return fileChooser.showOpenDialog(null);
+	}
+
+	private File normalizeSelectedExecutable(EmulatorType emulatorType, File selectedFile) {
+		if (selectedFile == null) {
+			return null;
+		}
+
+		if (selectedFile.getName().equalsIgnoreCase(emulatorType.getExecutableName())) {
+			return selectedFile;
+		}
+
+		if (emulatorType == EmulatorType.MUMU
+				&& selectedFile.getName().equalsIgnoreCase("MuMuPlayer Pro.app")) {
+			File appBinary = new File(selectedFile, "Contents/MacOS/" + emulatorType.getExecutableName());
+			return appBinary.isFile() ? appBinary : null;
+		}
+
+		return null;
 	}
 
 	private void showConcurrentInstanceWarning() {

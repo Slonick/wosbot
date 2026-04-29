@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.Socket;
 import java.util.concurrent.atomic.AtomicReference;
 
+import cl.camodev.utiles.PlatformPaths;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.slf4j.Logger;
@@ -310,13 +311,7 @@ public class ScrcpyStreamCapture implements VideoStreamCapture {
      * @return Absolute path, or {@code null} if not found
      */
     public static String findFfmpeg() {
-        String[] candidates = {
-            "lib/ffmpeg/ffmpeg.exe",
-            "wos-hmi/lib/ffmpeg/ffmpeg.exe",
-            "lib/ffmpeg/ffmpeg",
-            "wos-hmi/lib/ffmpeg/ffmpeg",
-        };
-        return findFirstExisting(candidates);
+        return PlatformPaths.resolveBundledFfmpegPath();
     }
 
     /**
