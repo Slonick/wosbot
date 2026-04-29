@@ -41,6 +41,13 @@
 			<version>2.0.1</version>
 		</dependency>
 
+		<!-- Native Windows title bar integration -->
+		<dependency>
+			<groupId>net.java.dev.jna</groupId>
+			<artifactId>jna-platform</artifactId>
+			<version>5.17.0</version>
+		</dependency>
+
 		<!-- Ikonli Icon System -->
 		<dependency>
 			<groupId>org.kordamp.ikonli</groupId>
